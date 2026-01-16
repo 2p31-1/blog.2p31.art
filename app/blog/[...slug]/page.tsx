@@ -151,7 +151,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <Separator size="4" />
       </Box>
 
-      <MarkdownRenderer content={contentWithoutHashtags} />
+      <MarkdownRenderer content={contentWithoutHashtags} slug={post.slug} />
 
       {post.hashtags.length > 0 && (
         <Box mt="8" pt="6" style={{ borderTop: '1px solid var(--gray-4)' }}>
