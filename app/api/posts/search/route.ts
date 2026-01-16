@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { searchPosts } from '@/lib/posts';
+import { searchPostsWithCategory } from '@/lib/posts';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const posts = searchPosts(query, limit);
+    const posts = searchPostsWithCategory(query, limit);
     return NextResponse.json({ posts });
   } catch (error) {
     console.error('Error searching posts:', error);

@@ -9,6 +9,7 @@ interface PostCardProps {
   title: string;
   excerpt: string;
   thumbnail: string | null;
+  category: string;
   createdAt: string;
   modifiedAt: string;
   readingTime: number;
@@ -36,6 +37,7 @@ export function PostCard({
   title,
   excerpt,
   thumbnail,
+  category,
   createdAt,
   modifiedAt,
   readingTime,
@@ -48,9 +50,15 @@ export function PostCard({
       <Card size="2" style={{ cursor: 'pointer', overflow: 'hidden' }} className="post-card">
         <Flex gap="4">
           <Box style={{ flex: 1 }}>
-            <Heading size="4" mb="2" style={{ color: 'var(--gray-12)' }}>
+            <Heading size="4" mb="1" style={{ color: 'var(--gray-12)' }}>
               {title}
             </Heading>
+
+            {category && (
+              <Text size="1" color="gray" mb="2" as="div">
+                {category}
+              </Text>
+            )}
 
             <Flex gap="3" mb="3" wrap="wrap">
               <Flex align="center" gap="1">

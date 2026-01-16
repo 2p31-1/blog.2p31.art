@@ -3,7 +3,8 @@ import { getPostBySlug } from '@/lib/posts';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { HashtagList } from '@/components/HashtagList';
 import { Box, Flex, Heading, Text, Separator } from '@radix-ui/themes';
-import { ClockIcon, CalendarIcon } from '@radix-ui/react-icons';
+import { ClockIcon, CalendarIcon, ChevronRightIcon } from '@radix-ui/react-icons';
+import Link from 'next/link';
 
 export const dynamic = 'force-dynamic';
 
@@ -60,18 +61,22 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     })
     .join('\n');
 
+  // Build category breadcrumb
+  const categoryParts = post.category ? post.category.split('/') : [];
+  const categoryBreadcrumbs = categoryParts.map((part, index) => ({
+    name: part,
+    path: categoryParts.slice(0, index + 1).join('/'),
+  }));
+
   return (
     <Box>
       <Box
         mb="6"
-        p="6"
+        py="4"
         style={{
           position: 'relative',
           borderRadius: 'var(--radius-3)',
           overflow: 'hidden',
-          ...(post.thumbnail && {
-            background: `linear-gradient(to bottom, var(--color-background), var(--color-background))`,
-          }),
         }}
       >
         {post.thumbnail && (
@@ -91,9 +96,29 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           />
         )}
         <Box style={{ position: 'relative', zIndex: 1 }}>
-          <Heading size="8" mb="4">
+          <Heading size="8" mb="2">
             {post.title}
           </Heading>
+
+          {/* Category breadcrumb */}
+          {categoryBreadcrumbs.length > 0 && (
+            <Flex align="center" gap="1" mb="4" wrap="wrap">
+              <Link href="/" style={{ textDecoration: 'none' }}>
+                <Text size="2" color="gray">전체</Text>
+              </Link>
+              {categoryBreadcrumbs.map((crumb) => (
+                <Flex key={crumb.path} align="center" gap="1">
+                  <ChevronRightIcon width="12" height="12" color="gray" />
+                  <Link
+                    href={`/category/${encodeURIComponent(crumb.path)}`}
+                    style={{ textDecoration: 'none' }}
+                  >
+                    <Text size="2" color="gray">{crumb.name}</Text>
+                  </Link>
+                </Flex>
+              ))}
+            </Flex>
+          )}
 
           <Flex gap="4" mb="4" wrap="wrap" align="center">
             <Flex align="center" gap="1">

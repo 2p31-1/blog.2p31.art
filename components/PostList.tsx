@@ -8,6 +8,7 @@ interface Post {
   title: string;
   excerpt: string;
   thumbnail: string | null;
+  category: string;
   created_at: string;
   modified_at: string;
   reading_time: number;
@@ -43,6 +44,7 @@ export function PostList({ posts }: PostListProps) {
           title={post.title}
           excerpt={post.excerpt}
           thumbnail={post.thumbnail}
+          category={post.category}
           createdAt={post.created_at}
           modifiedAt={post.modified_at}
           readingTime={post.reading_time}

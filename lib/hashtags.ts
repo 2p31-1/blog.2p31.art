@@ -20,15 +20,16 @@ export function getHashtagsWithCount(): { name: string; count: number }[] {
   `).all() as { name: string; count: number }[];
 }
 
-export function searchHashtags(query: string, limit: number = 10): string[] {
+export function searchHashtags(query: string, limit: number = 10): { name: string; count: number }[] {
   const db = getDb();
 
-  const hashtags = db.prepare(`
-    SELECT name FROM hashtags
-    WHERE name LIKE ?
-    ORDER BY name
+  return db.prepare(`
+    SELECT h.name, COUNT(ph.post_id) as count
+    FROM hashtags h
+    LEFT JOIN post_hashtags ph ON h.id = ph.hashtag_id
+    WHERE h.name LIKE ?
+    GROUP BY h.id
+    ORDER BY count DESC, h.name ASC
     LIMIT ?
-  `).all(`%${query}%`, limit) as { name: string }[];
-
-  return hashtags.map(h => h.name);
+  `).all(`%${query}%`, limit) as { name: string; count: number }[];
 }

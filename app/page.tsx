@@ -1,6 +1,7 @@
 import { getAllPosts } from '@/lib/posts';
 import { PostWithHashtags } from '@/lib/db';
 import { PostList } from '@/components/PostList';
+import { CategoryTree } from '@/components/CategoryTree';
 import { Box } from '@radix-ui/themes';
 import { config } from '@/lib/config';
 
@@ -17,6 +18,7 @@ export default function Home() {
 
   return (
     <Box>
+      <CategoryTree />
       <PostList posts={posts} />
     </Box>
   );

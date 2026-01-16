@@ -26,6 +26,7 @@ db.exec(`
     content TEXT NOT NULL,
     excerpt TEXT,
     thumbnail TEXT,
+    category TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     modified_at TEXT NOT NULL,
     reading_time INTEGER NOT NULL
@@ -46,6 +47,7 @@ db.exec(`
 
   CREATE INDEX idx_posts_created ON posts(created_at DESC);
   CREATE INDEX idx_posts_modified ON posts(modified_at DESC);
+  CREATE INDEX idx_posts_category ON posts(category);
   CREATE INDEX idx_hashtags_name ON hashtags(name);
 `);
 
@@ -100,6 +102,15 @@ function extractThumbnail(content: string): string | null {
   return null;
 }
 
+// Extract category from slug (directory path)
+function extractCategory(slug: string): string {
+  const parts = slug.split('/');
+  if (parts.length <= 1) {
+    return ''; // No category (root level)
+  }
+  return parts.slice(0, -1).join('/');
+}
+
 // Extract excerpt (first paragraph after title)
 function extractExcerpt(content: string): string {
   const lines = content.split('\n');
@@ -149,8 +160,8 @@ function getMarkdownFiles(dir: string, baseDir: string = dir): string[] {
 
 // Prepare statements
 const insertPost = db.prepare(`
-  INSERT INTO posts (slug, title, content, excerpt, thumbnail, created_at, modified_at, reading_time)
-  VALUES (@slug, @title, @content, @excerpt, @thumbnail, @created_at, @modified_at, @reading_time)
+  INSERT INTO posts (slug, title, content, excerpt, thumbnail, category, created_at, modified_at, reading_time)
+  VALUES (@slug, @title, @content, @excerpt, @thumbnail, @category, @created_at, @modified_at, @reading_time)
 `);
 
 const insertHashtag = db.prepare(`
@@ -179,6 +190,7 @@ for (const filePath of files) {
   const title = extractTitle(content, path.basename(filePath));
   const excerpt = extractExcerpt(content);
   const thumbnail = extractThumbnail(content);
+  const category = extractCategory(slug);
   const hashtags = extractHashtags(content);
   const readingTime = calculateReadingTime(content);
 
@@ -193,6 +205,7 @@ for (const filePath of files) {
       content,
       excerpt,
       thumbnail,
+      category,
       created_at: createdAt,
       modified_at: modifiedAt,
       reading_time: readingTime,
@@ -209,7 +222,7 @@ for (const filePath of files) {
       }
     }
 
-    console.log(`Processed: ${slug} (${hashtags.length} hashtags, ${readingTime} min read)`);
+    console.log(`Processed: ${slug} (category: ${category || '없음'}, ${hashtags.length} hashtags, ${readingTime} min read)`);
   } catch (error) {
     console.error(`Error processing ${filePath}:`, error);
   }

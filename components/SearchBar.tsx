@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { TextField, Box, Text, Kbd } from '@radix-ui/themes';
+import { TextField, Box, Text, Kbd, Badge, Flex } from '@radix-ui/themes';
 import { MagnifyingGlassIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
 
@@ -10,6 +10,11 @@ interface SearchResult {
   slug: string;
   title: string;
   excerpt: string;
+}
+
+interface HashtagSuggestion {
+  name: string;
+  count: number;
 }
 
 interface SearchBarProps {
@@ -20,15 +25,26 @@ interface SearchBarProps {
 export function SearchBar({ autoFocus, onClose }: SearchBarProps) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState<SearchResult[]>([]);
+  const [hashtags, setHashtags] = useState<HashtagSuggestion[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const router = useRouter();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Load popular hashtags on mount
+  useEffect(() => {
+    fetch('/api/hashtags')
+      .then(res => res.json())
+      .then(data => setHashtags((data.hashtags || []).slice(0, 8)))
+      .catch(console.error);
+  }, []);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
+        setShowSuggestions(false);
       }
     };
 
@@ -44,6 +60,7 @@ export function SearchBar({ autoFocus, onClose }: SearchBarProps) {
         return;
       }
 
+      setShowSuggestions(false);
       setLoading(true);
       try {
         const res = await fetch(`/api/posts/search?q=${encodeURIComponent(query)}&limit=5`);
@@ -61,6 +78,14 @@ export function SearchBar({ autoFocus, onClose }: SearchBarProps) {
     const debounce = setTimeout(search, 300);
     return () => clearTimeout(debounce);
   }, [query]);
+
+  const handleFocus = () => {
+    if (query.trim()) {
+      setIsOpen(true);
+    } else {
+      setShowSuggestions(true);
+    }
+  };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && query.trim()) {
@@ -81,7 +106,7 @@ export function SearchBar({ autoFocus, onClose }: SearchBarProps) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={handleKeyDown}
-        onFocus={() => query.trim() && setIsOpen(true)}
+        onFocus={handleFocus}
         size="2"
         autoFocus={autoFocus}
       >
@@ -93,6 +118,44 @@ export function SearchBar({ autoFocus, onClose }: SearchBarProps) {
         </TextField.Slot>
       </TextField.Root>
 
+      {/* Hashtag suggestions when focused with empty query */}
+      {showSuggestions && hashtags.length > 0 && (
+        <Box
+          position="absolute"
+          top="100%"
+          left="0"
+          right="0"
+          mt="1"
+          p="3"
+          style={{
+            backgroundColor: 'var(--color-panel-solid)',
+            border: '1px solid var(--gray-6)',
+            borderRadius: 'var(--radius-2)',
+            boxShadow: 'var(--shadow-3)',
+            zIndex: 100,
+          }}
+        >
+          <Text size="1" color="gray" mb="2" as="div">인기 태그</Text>
+          <Flex gap="2" wrap="wrap">
+            {hashtags.map((tag) => (
+              <Link
+                key={tag.name}
+                href={`/hashtag/${encodeURIComponent(tag.name)}`}
+                onClick={() => {
+                  setShowSuggestions(false);
+                  onClose?.();
+                }}
+              >
+                <Badge variant="soft" color="gray" style={{ cursor: 'pointer' }}>
+                  #{tag.name} ({tag.count})
+                </Badge>
+              </Link>
+            ))}
+          </Flex>
+        </Box>
+      )}
+
+      {/* Search results */}
       {isOpen && (results.length > 0 || loading) && (
         <Box
           position="absolute"
