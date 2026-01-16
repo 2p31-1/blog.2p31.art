@@ -1,31 +1,5 @@
-# 안녕하세요, 첫 번째 글입니다
+# VS CODE를 웹에서 실행하기 (oauth2-proxy, nginx reverse proxy)
 
-이것은 개발 블로그의 첫 번째 테스트 글입니다. 마크다운으로 작성된 글이 어떻게 렌더링되는지 확인해보세요.
+## test
 
-## 코드 예시
-
-다음은 JavaScript 코드 예시입니다:
-
-```javascript
-function hello() {
-  console.log('Hello, World!');
-}
-
-hello();
-```
-
-## 리스트 예시
-
-- 첫 번째 항목
-- 두 번째 항목
-- 세 번째 항목
-
-## 인용문
-
-> 좋은 코드는 그 자체로 최고의 문서이다.
-
-## 링크
-
-[GitHub](https://github.com)에서 더 많은 프로젝트를 확인하세요.
-
-#개발 #블로그 #테스트
+#oauth2-proxy #nginx #vscode #coder
