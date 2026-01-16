@@ -87,7 +87,7 @@ function extractHashtags(content: string): string[] {
   const lines = content.trim().split('\n');
   const lastLines = lines.slice(-5).join('\n'); // Check last 5 lines
   const hashtags = lastLines.match(/#([가-힣a-zA-Z0-9_]+)/g) || [];
-  return [...new Set(hashtags.map(tag => tag.substring(1)))];
+  return Array.from(new Set(hashtags.map(tag => tag.substring(1))));
 }
 
 // Extract first image from content

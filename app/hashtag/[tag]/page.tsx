@@ -1,4 +1,5 @@
 import { getPostsByHashtag, getPostsCountByHashtag } from '@/lib/posts';
+import { PostWithHashtags } from '@/lib/db';
 import { PostList } from '@/components/PostList';
 import { Box, Flex, Heading, Badge, Text } from '@radix-ui/themes';
 import { config } from '@/lib/config';
@@ -13,7 +14,7 @@ export default async function HashtagPage({ params }: HashtagPageProps) {
   const { tag } = await params;
   const decodedTag = decodeURIComponent(tag);
 
-  let posts = [];
+  let posts: PostWithHashtags[] = [];
   let totalCount = 0;
 
   try {
