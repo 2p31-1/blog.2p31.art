@@ -57,7 +57,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         return false;
       }
       // Remove hashtag-only lines
-      return !line.trim().match(/^#[가-힣a-zA-Z0-9_]+(\s+#[가-힣a-zA-Z0-9_]+)*$/);
+      return !line.trim().match(/^#\S+(\s+#\S+)*$/);
     })
     .join('\n');
 
