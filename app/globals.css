@@ -1,0 +1,151 @@
+@import '@radix-ui/themes/styles.css';
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css');
+@import url('https://cdn.jsdelivr.net/gh/joungkyun/font-d2coding@v1.3.2/d2coding.css');
+
+:root {
+  --max-width: 1100px;
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, 'Helvetica Neue', 'Segoe UI', 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', sans-serif;
+  --font-mono: 'D2Coding', 'D2 Coding', Consolas, 'Courier New', monospace;
+  --default-font-family: var(--font-sans);
+  --code-font-family: var(--font-mono);
+}
+
+.radix-themes {
+  --default-font-family: var(--font-sans);
+  --code-font-family: var(--font-mono);
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: var(--font-sans);
+}
+
+a {
+  color: inherit;
+}
+
+/* Post card hover effect */
+.post-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.post-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-4);
+}
+
+/* Search result hover */
+.search-result-item:hover {
+  background-color: var(--gray-3);
+}
+
+/* Markdown content styles */
+.markdown-content {
+  font-size: 16px;
+  line-height: 1.8;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 600;
+}
+
+.markdown-content p {
+  margin-bottom: 1em;
+}
+
+.markdown-content pre {
+  margin: 1em 0;
+  padding: 1em;
+  border-radius: var(--radius-2);
+  overflow-x: auto;
+}
+
+.markdown-content code {
+  font-family: var(--font-mono);
+}
+
+.markdown-content img {
+  max-width: 100%;
+  height: auto;
+  border-radius: var(--radius-2);
+  margin: 1em 0;
+}
+
+.markdown-content blockquote {
+  border-left: 4px solid var(--gray-6);
+  padding-left: 1em;
+  margin: 1em 0;
+  color: var(--gray-11);
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin: 1em 0;
+  padding-left: 2em;
+}
+
+.markdown-content li {
+  margin: 0.5em 0;
+}
+
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid var(--gray-6);
+  padding: 0.5em 1em;
+  text-align: left;
+}
+
+.markdown-content th {
+  background-color: var(--gray-3);
+}
+
+.markdown-content hr {
+  border: none;
+  border-top: 1px solid var(--gray-6);
+  margin: 2em 0;
+}
+
+.markdown-content a {
+  color: var(--accent-11);
+  text-decoration: underline;
+}
+
+.markdown-content a:hover {
+  color: var(--accent-12);
+}
+
+/* Responsive header */
+.header-mobile {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .header-desktop {
+    display: none;
+  }
+
+  .header-mobile {
+    display: block;
+  }
+}

@@ -1,0 +1,141 @@
+import { notFound } from 'next/navigation';
+import { getPostBySlug } from '@/lib/posts';
+import { MarkdownRenderer } from '@/components/MarkdownRenderer';
+import { HashtagList } from '@/components/HashtagList';
+import { Box, Flex, Heading, Text, Separator } from '@radix-ui/themes';
+import { ClockIcon, CalendarIcon } from '@radix-ui/react-icons';
+
+export const dynamic = 'force-dynamic';
+
+interface BlogPostPageProps {
+  params: Promise<{ slug: string[] }>;
+}
+
+function formatDate(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleDateString('ko-KR', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+}
+
+function getThumbnailUrl(thumbnail: string): string {
+  if (thumbnail.startsWith('http')) {
+    return thumbnail;
+  }
+  return `/md/${encodeURIComponent(thumbnail).replace(/%2F/g, '/')}`;
+}
+
+export default async function BlogPostPage({ params }: BlogPostPageProps) {
+  const { slug } = await params;
+  const slugPath = decodeURIComponent(slug.join('/'));
+
+  let post = null;
+
+  try {
+    post = getPostBySlug(slugPath);
+  } catch (error) {
+    console.error('Error loading post:', error);
+  }
+
+  if (!post) {
+    notFound();
+  }
+
+  const isModified = post.created_at !== post.modified_at;
+
+  // Remove first h1 title and hashtag lines from content for display
+  const lines = post.content.split('\n');
+  let firstH1Removed = false;
+  const contentWithoutHashtags = lines
+    .filter((line) => {
+      // Remove first # title if exists
+      if (!firstH1Removed && line.trim().match(/^#\s+.+$/)) {
+        firstH1Removed = true;
+        return false;
+      }
+      // Remove hashtag-only lines
+      return !line.trim().match(/^#[가-힣a-zA-Z0-9_]+(\s+#[가-힣a-zA-Z0-9_]+)*$/);
+    })
+    .join('\n');
+
+  return (
+    <Box>
+      <Box
+        mb="6"
+        p="6"
+        style={{
+          position: 'relative',
+          borderRadius: 'var(--radius-3)',
+          overflow: 'hidden',
+          ...(post.thumbnail && {
+            background: `linear-gradient(to bottom, var(--color-background), var(--color-background))`,
+          }),
+        }}
+      >
+        {post.thumbnail && (
+          <Box
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundImage: `url(${getThumbnailUrl(post.thumbnail)})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              opacity: 0.1,
+              zIndex: 0,
+            }}
+          />
+        )}
+        <Box style={{ position: 'relative', zIndex: 1 }}>
+          <Heading size="8" mb="4">
+            {post.title}
+          </Heading>
+
+          <Flex gap="4" mb="4" wrap="wrap" align="center">
+            <Flex align="center" gap="1">
+              <CalendarIcon />
+              <Text size="2" color="gray">
+                {formatDate(post.created_at)}
+              </Text>
+            </Flex>
+
+            {isModified && (
+              <Text size="2" color="gray">
+                (수정: {formatDate(post.modified_at)})
+              </Text>
+            )}
+
+            <Flex align="center" gap="1">
+              <ClockIcon />
+              <Text size="2" color="gray">
+                {post.reading_time}분 소요
+              </Text>
+            </Flex>
+          </Flex>
+
+          {post.hashtags.length > 0 && (
+            <Box mb="4">
+              <HashtagList hashtags={post.hashtags} />
+            </Box>
+          )}
+        </Box>
+        <Separator size="4" />
+      </Box>
+
+      <MarkdownRenderer content={contentWithoutHashtags} />
+
+      {post.hashtags.length > 0 && (
+        <Box mt="8" pt="6" style={{ borderTop: '1px solid var(--gray-4)' }}>
+          <Text size="2" color="gray" mb="2" as="div">
+            태그
+          </Text>
+          <HashtagList hashtags={post.hashtags} />
+        </Box>
+      )}
+    </Box>
+  );
+}
