@@ -8,6 +8,7 @@ interface Post {
   title: string;
   excerpt: string;
   thumbnail: string | null;
+  blur_data_url: string | null;
   category: string;
   created_at: string;
   modified_at: string;
@@ -44,6 +45,7 @@ export function PostList({ posts }: PostListProps) {
           title={post.title}
           excerpt={post.excerpt}
           thumbnail={post.thumbnail}
+          blurDataURL={post.blur_data_url}
           category={post.category}
           createdAt={post.created_at}
           modifiedAt={post.modified_at}

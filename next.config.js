@@ -1,14 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Expose /md folder as static files
-  async rewrites() {
-    return [
-      {
-        source: '/md/:path*',
-        destination: '/api/static/:path*',
-      },
-    ];
-  },
   // CDN 캐싱을 위한 헤더 설정
   async headers() {
     return [

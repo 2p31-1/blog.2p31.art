@@ -29,6 +29,10 @@ build/
 *.sqlite3
 data/
 
+# Build-generated static files
+public/md/
+public/feed.xml
+
 # IDE
 .idea/
 .vscode/

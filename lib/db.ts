@@ -19,6 +19,7 @@ export interface Post {
   content: string;
   excerpt: string;
   thumbnail: string | null;
+  blur_data_url: string | null;
   category: string;
   created_at: string;
   modified_at: string;

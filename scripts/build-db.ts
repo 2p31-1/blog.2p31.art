@@ -1,13 +1,45 @@
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
+import sharp from 'sharp';
 
 const MD_DIR = path.join(process.cwd(), 'md');
 const DB_PATH = path.join(process.cwd(), 'data', 'blog.db');
+const PUBLIC_MD_DIR = path.join(process.cwd(), 'public', 'md');
 
 // Ensure data directory exists
 if (!fs.existsSync(path.dirname(DB_PATH))) {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+}
+
+// Copy md folder to public/md for static serving
+function copyMdToPublic() {
+  // Remove existing public/md
+  if (fs.existsSync(PUBLIC_MD_DIR)) {
+    fs.rmSync(PUBLIC_MD_DIR, { recursive: true });
+  }
+
+  // Copy md to public/md
+  copyDirRecursive(MD_DIR, PUBLIC_MD_DIR);
+  console.log('Copied md folder to public/md');
+}
+
+function copyDirRecursive(src: string, dest: string) {
+  if (!fs.existsSync(src)) return;
+
+  fs.mkdirSync(dest, { recursive: true });
+  const entries = fs.readdirSync(src, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const srcPath = path.join(src, entry.name);
+    const destPath = path.join(dest, entry.name);
+
+    if (entry.isDirectory()) {
+      copyDirRecursive(srcPath, destPath);
+    } else {
+      fs.copyFileSync(srcPath, destPath);
+    }
+  }
 }
 
 // Delete existing database
@@ -26,6 +58,7 @@ db.exec(`
     content TEXT NOT NULL,
     excerpt TEXT,
     thumbnail TEXT,
+    blur_data_url TEXT,
     category TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     modified_at TEXT NOT NULL,
@@ -110,6 +143,42 @@ function extractThumbnail(content: string, slug: string): string | null {
   return null;
 }
 
+// Generate blurDataURL from image
+async function generateBlurDataURL(imagePath: string): Promise<string | null> {
+  try {
+    if (!fs.existsSync(imagePath)) {
+      return null;
+    }
+
+    const buffer = await sharp(imagePath)
+      .resize(10, 10, { fit: 'cover' })
+      .blur()
+      .toBuffer();
+
+    const base64 = buffer.toString('base64');
+    const mimeType = imagePath.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.warn(`Failed to generate blur for ${imagePath}:`, error);
+    return null;
+  }
+}
+
+// Get full image path from thumbnail
+function getImagePath(thumbnail: string, slug: string): string | null {
+  if (thumbnail.startsWith('http')) {
+    return null; // 외부 URL은 blur 생성 불가
+  }
+
+  // 썸네일 경로에서 실제 파일 경로 계산
+  const imagePath = path.join(MD_DIR, thumbnail);
+  if (fs.existsSync(imagePath)) {
+    return imagePath;
+  }
+
+  return null;
+}
+
 // Extract category from slug (directory path)
 function extractCategory(slug: string): string {
   const parts = slug.split('/');
@@ -168,8 +237,8 @@ function getMarkdownFiles(dir: string, baseDir: string = dir): string[] {
 
 // Prepare statements
 const insertPost = db.prepare(`
-  INSERT INTO posts (slug, title, content, excerpt, thumbnail, category, created_at, modified_at, reading_time)
-  VALUES (@slug, @title, @content, @excerpt, @thumbnail, @category, @created_at, @modified_at, @reading_time)
+  INSERT INTO posts (slug, title, content, excerpt, thumbnail, blur_data_url, category, created_at, modified_at, reading_time)
+  VALUES (@slug, @title, @content, @excerpt, @thumbnail, @blur_data_url, @category, @created_at, @modified_at, @reading_time)
 `);
 
 const insertHashtag = db.prepare(`
@@ -184,57 +253,161 @@ const insertPostHashtag = db.prepare(`
   INSERT OR IGNORE INTO post_hashtags (post_id, hashtag_id) VALUES (?, ?)
 `);
 
+// Load config for feed.xml generation
+const configPath = path.join(process.cwd(), '.env.local');
+const envPath = fs.existsSync(configPath) ? configPath : path.join(process.cwd(), '.env');
+let blogName = '개발 블로그';
+let blogDescription = '개인 개발 블로그';
+let siteUrl = 'https://example.com';
+
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8');
+  const nameMatch = envContent.match(/NEXT_PUBLIC_BLOG_NAME=(.+)/);
+  const descMatch = envContent.match(/NEXT_PUBLIC_BLOG_DESCRIPTION=(.+)/);
+  const urlMatch = envContent.match(/NEXT_PUBLIC_SITE_URL=(.+)/);
+  if (nameMatch) blogName = nameMatch[1].trim();
+  if (descMatch) blogDescription = descMatch[1].trim();
+  if (urlMatch) siteUrl = urlMatch[1].trim();
+}
+
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
+}
+
 // Process all markdown files
-const files = getMarkdownFiles(MD_DIR);
-console.log(`Found ${files.length} markdown files`);
+async function processFiles() {
+  const files = getMarkdownFiles(MD_DIR);
+  console.log(`Found ${files.length} markdown files`);
 
-for (const filePath of files) {
-  const relativePath = path.relative(MD_DIR, filePath);
-  const slug = relativePath.replace(/\.md$/, '').replace(/\\/g, '/');
+  const postsForFeed: Array<{
+    slug: string;
+    title: string;
+    excerpt: string;
+    created_at: string;
+  }> = [];
 
-  const content = fs.readFileSync(filePath, 'utf-8');
-  const stats = fs.statSync(filePath);
+  for (const filePath of files) {
+    const relativePath = path.relative(MD_DIR, filePath);
+    const slug = relativePath.replace(/\.md$/, '').replace(/\\/g, '/');
 
-  const title = extractTitle(content, path.basename(filePath));
-  const excerpt = extractExcerpt(content);
-  const thumbnail = extractThumbnail(content, slug);
-  const category = extractCategory(slug);
-  const hashtags = extractHashtags(content);
-  const readingTime = calculateReadingTime(content);
+    const content = fs.readFileSync(filePath, 'utf-8');
+    const stats = fs.statSync(filePath);
 
-  // Use birthtime for created_at, mtime for modified_at
-  const createdAt = stats.birthtime.toISOString();
-  const modifiedAt = stats.mtime.toISOString();
+    const title = extractTitle(content, path.basename(filePath));
+    const excerpt = extractExcerpt(content);
+    const thumbnail = extractThumbnail(content, slug);
+    const category = extractCategory(slug);
+    const hashtags = extractHashtags(content);
+    const readingTime = calculateReadingTime(content);
 
-  try {
-    const result = insertPost.run({
-      slug,
-      title,
-      content,
-      excerpt,
-      thumbnail,
-      category,
-      created_at: createdAt,
-      modified_at: modifiedAt,
-      reading_time: readingTime,
-    });
+    // Use birthtime for created_at, mtime for modified_at
+    const createdAt = stats.birthtime.toISOString();
+    const modifiedAt = stats.mtime.toISOString();
 
-    const postId = result.lastInsertRowid;
-
-    // Insert hashtags
-    for (const tag of hashtags) {
-      insertHashtag.run({ name: tag });
-      const hashtagRow = getHashtagId.get(tag) as { id: number };
-      if (hashtagRow) {
-        insertPostHashtag.run(postId, hashtagRow.id);
+    // Generate blurDataURL for thumbnail
+    let blurDataUrl: string | null = null;
+    if (thumbnail) {
+      const imagePath = getImagePath(thumbnail, slug);
+      if (imagePath) {
+        blurDataUrl = await generateBlurDataURL(imagePath);
       }
     }
 
-    console.log(`Processed: ${slug} (category: ${category || '없음'}, ${hashtags.length} hashtags, ${readingTime} min read)`);
-  } catch (error) {
-    console.error(`Error processing ${filePath}:`, error);
+    try {
+      const result = insertPost.run({
+        slug,
+        title,
+        content,
+        excerpt,
+        thumbnail,
+        blur_data_url: blurDataUrl,
+        category,
+        created_at: createdAt,
+        modified_at: modifiedAt,
+        reading_time: readingTime,
+      });
+
+      const postId = result.lastInsertRowid;
+
+      // Insert hashtags
+      for (const tag of hashtags) {
+        insertHashtag.run({ name: tag });
+        const hashtagRow = getHashtagId.get(tag) as { id: number };
+        if (hashtagRow) {
+          insertPostHashtag.run(postId, hashtagRow.id);
+        }
+      }
+
+      // Add to feed list
+      postsForFeed.push({ slug, title, excerpt, created_at: createdAt });
+
+      const blurStatus = blurDataUrl ? '✓ blur' : '';
+      console.log(`Processed: ${slug} (${category || '없음'}, ${hashtags.length} tags, ${readingTime}min ${blurStatus})`);
+    } catch (error) {
+      console.error(`Error processing ${filePath}:`, error);
+    }
   }
+
+  // Generate feed.xml
+  generateFeedXml(postsForFeed);
+
+  db.close();
+  console.log(`\nDatabase created at ${DB_PATH}`);
 }
 
-db.close();
-console.log(`\nDatabase created at ${DB_PATH}`);
+// Generate static feed.xml
+function generateFeedXml(posts: Array<{ slug: string; title: string; excerpt: string; created_at: string }>) {
+  // Sort by created_at descending
+  const sortedPosts = posts.sort((a, b) =>
+    new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  ).slice(0, 50);
+
+  const rssItems = sortedPosts
+    .map((post) => {
+      const postUrl = `${siteUrl}/blog/${encodeURIComponent(post.slug)}`;
+      const pubDate = new Date(post.created_at).toUTCString();
+
+      return `
+    <item>
+      <title>${escapeXml(post.title)}</title>
+      <link>${postUrl}</link>
+      <guid isPermaLink="true">${postUrl}</guid>
+      <pubDate>${pubDate}</pubDate>
+      <description>${escapeXml(post.excerpt || '')}</description>
+    </item>`;
+    })
+    .join('');
+
+  const rss = `<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+  <channel>
+    <title>${escapeXml(blogName)}</title>
+    <link>${siteUrl}</link>
+    <description>${escapeXml(blogDescription)}</description>
+    <language>ko</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
+    <atom:link href="${siteUrl}/feed.xml" rel="self" type="application/rss+xml"/>${rssItems}
+  </channel>
+</rss>`;
+
+  const publicDir = path.join(process.cwd(), 'public');
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+  }
+
+  fs.writeFileSync(path.join(publicDir, 'feed.xml'), rss, 'utf-8');
+  console.log(`\nGenerated feed.xml with ${sortedPosts.length} items`);
+}
+
+// Run
+async function main() {
+  copyMdToPublic();
+  await processFiles();
+}
+
+main();

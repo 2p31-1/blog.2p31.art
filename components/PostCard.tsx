@@ -3,12 +3,14 @@
 import { Box, Card, Flex, Heading, Text, Badge } from '@radix-ui/themes';
 import { ClockIcon, CalendarIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
+import Image from 'next/image';
 
 interface PostCardProps {
   slug: string;
   title: string;
   excerpt: string;
   thumbnail: string | null;
+  blurDataURL: string | null;
   category: string;
   createdAt: string;
   modifiedAt: string;
@@ -37,6 +39,7 @@ export function PostCard({
   title,
   excerpt,
   thumbnail,
+  blurDataURL,
   category,
   createdAt,
   modifiedAt,
@@ -107,16 +110,17 @@ export function PostCard({
                 flexShrink: 0,
                 borderRadius: 'var(--radius-2)',
                 overflow: 'hidden',
+                position: 'relative',
               }}
             >
-              <img
+              <Image
                 src={getThumbnailUrl(thumbnail)}
                 alt=""
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  objectFit: 'cover',
-                }}
+                fill
+                sizes="120px"
+                style={{ objectFit: 'cover' }}
+                placeholder={blurDataURL ? 'blur' : 'empty'}
+                blurDataURL={blurDataURL || undefined}
               />
             </Box>
           )}
