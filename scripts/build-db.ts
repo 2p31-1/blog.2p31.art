@@ -92,12 +92,20 @@ function extractHashtags(content: string): string[] {
   return Array.from(new Set(hashtags.map(tag => tag.substring(1))));
 }
 
-// Extract first image from content
-function extractThumbnail(content: string): string | null {
+// Extract first image from content with resolved path
+function extractThumbnail(content: string, slug: string): string | null {
   // Match markdown image syntax: ![alt](url)
   const match = content.match(/!\[[^\]]*\]\(([^)]+)\)/);
   if (match) {
-    return match[1];
+    const imagePath = match[1];
+    // If it's an absolute URL, return as-is
+    if (imagePath.startsWith('http')) {
+      return imagePath;
+    }
+    // Get directory from slug (e.g., "분류1/a" -> "분류1")
+    const slugDir = slug.includes('/') ? slug.substring(0, slug.lastIndexOf('/')) : '';
+    // Combine slug directory with image path
+    return slugDir ? `${slugDir}/${imagePath}` : imagePath;
   }
   return null;
 }
@@ -189,7 +197,7 @@ for (const filePath of files) {
 
   const title = extractTitle(content, path.basename(filePath));
   const excerpt = extractExcerpt(content);
-  const thumbnail = extractThumbnail(content);
+  const thumbnail = extractThumbnail(content, slug);
   const category = extractCategory(slug);
   const hashtags = extractHashtags(content);
   const readingTime = calculateReadingTime(content);
