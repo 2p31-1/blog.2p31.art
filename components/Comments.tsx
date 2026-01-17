@@ -1,27 +1,41 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useTheme } from './ThemeProvider';
 import { Box } from '@radix-ui/themes';
 
 export function Comments() {
   const ref = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
+  const [loaded, setLoaded] = useState(false);
 
-  // 초기 마운트 시 한 번만 스크립트 로드
+  // IntersectionObserver로 뷰포트에 들어왔을 때 로드
   useEffect(() => {
-    if (!ref.current || ref.current.querySelector('.utterances')) return;
+    if (!ref.current || loaded) return;
 
-    const script = document.createElement('script');
-    script.src = 'https://utteranc.es/client.js';
-    script.setAttribute('repo', '2p31-1/blog.2p31.art');
-    script.setAttribute('issue-term', 'pathname');
-    script.setAttribute('theme', theme === 'dark' ? 'github-dark' : 'github-light');
-    script.setAttribute('crossorigin', 'anonymous');
-    script.async = true;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          const script = document.createElement('script');
+          script.src = 'https://utteranc.es/client.js';
+          script.setAttribute('repo', '2p31-1/blog.2p31.art');
+          script.setAttribute('issue-term', 'pathname');
+          script.setAttribute('theme', theme === 'dark' ? 'github-dark' : 'github-light');
+          script.setAttribute('crossorigin', 'anonymous');
+          script.async = true;
 
-    ref.current.appendChild(script);
-  }, []);
+          ref.current?.appendChild(script);
+          setLoaded(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: '100px' }
+    );
+
+    observer.observe(ref.current);
+
+    return () => observer.disconnect();
+  }, [theme, loaded]);
 
   // 테마 변경 시 postMessage로 테마만 변경
   useEffect(() => {
