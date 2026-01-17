@@ -15,14 +15,18 @@ export function ShareButton({ title, url }: ShareButtonProps) {
   const handleShare = async () => {
     const shareUrl = url || window.location.href;
 
-    // Copy to clipboard
+    // Copy to clipboard first
     try {
       await navigator.clipboard.writeText(shareUrl);
     } catch (e) {
       console.error('Failed to copy to clipboard:', e);
     }
 
-    // Use Web Share API if available
+    // Show check mark immediately after copy
+    setShared(true);
+    setTimeout(() => setShared(false), 2000);
+
+    // Then show share dialog
     if (navigator.share) {
       try {
         await navigator.share({
@@ -30,16 +34,11 @@ export function ShareButton({ title, url }: ShareButtonProps) {
           url: shareUrl,
         });
       } catch (e) {
-        // User cancelled or share failed - still show success for clipboard copy
         if ((e as Error).name !== 'AbortError') {
           console.error('Share failed:', e);
         }
       }
     }
-
-    // Show check mark
-    setShared(true);
-    setTimeout(() => setShared(false), 2000);
   };
 
   return (
