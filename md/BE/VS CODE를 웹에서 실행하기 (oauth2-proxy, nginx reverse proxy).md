@@ -1,4 +1,4 @@
-![](_attachments/Pasted image 20260117154439.png)
+![[Pasted image 20260117154439.png]]
 급하게 서버에 접속해야 할 때, 외부에서 셸이 필요할 때, 로컬 네트워크에서 일부 아웃바운드 포트가 막혀 있을 때 사용하고자, vscode를 서버에 설치했다.
 해당 서버는 현재 https 포트에서 나가는 서비스가 존재하고 있는 상태이다. 단순히 리눅스나 컴퓨팅 사용, 프로젝트 개발 뿐 아니라 현재 운영중인 서버의 관리나 문제 확인, 수정의 역할도 겸하기 위해 Docker가 아닌 시스템에서 데몬으로 vscode 서버를 띄우기로 했다.
 
@@ -81,19 +81,20 @@ oauth2-proxy는 nginx 없이도 자체적으로 reverse proxy를 제공하고, �
 - `[GITHUB_CLIENT_ID]`, `[GITHUB_CLIENT_SECRET]`: 다음 과정으로 발급받을 수 있다.
 1. [깃허브 OAuth Apps](https://github.com/settings/developers) 페이지에서 `New OAuth App`을 누른다.
 2. 페이지에 관한 정보 입력
-	![](_attachments/Pasted image 20260117181855.png)
+	![[Pasted image 20260117181855.png]]
 	- Application name: 자유롭게 작성한다.
 	- Homepage URL: 도메인 주소를 입력한다. (`https://[HOST]`)
 	- Authorization callback URL: OAUTH2_PROXY_REDIRECT_URL 값과 같은 값을 작성한다. (`https://[HOST]/oauth2/callback`)
 3. Client ID를 복사해서 `[GITHUB_CLIENT_ID]` 값에 입력한다. Generate a new client secret를 눌러 secret을 발급받는다.
-   ![](_attachments/Pasted image 20260117181937.png)
+   ![[Pasted image 20260117181937.png]]
 4. 나온 secret 값을 [GITHUB_CLIENT_SECRET] 값에 입력한다.
-   ![](_attachments/Pasted image 20260117182058.png)
+   ![[Pasted image 20260117182058.png]]
 - `[COOKIE_SECRET_BASE64]`: OAuth가 토큰을 인증하기 위한 Secret 키이다. 임의의 값을 입력하면 된다.
 	```bash
   dd if=/dev/urandom bs=32 count=1 2>/dev/null | base64 | tr -d -- '\n' | tr -- '+/' '-_' ; echo
 ```
-	실행 후 나온 값을 붙여 넣으면 된다.
+
+ 실행 후 나온 값을 붙여 넣으면 된다.
 
 위에서 작성한 값들은 아래에서 수정해 붙여넣는다.
 ```bash

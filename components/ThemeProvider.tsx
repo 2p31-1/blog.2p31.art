@@ -38,6 +38,13 @@ export function ThemeProvider({ children }: ThemeProviderProps) {
     }
   }, []);
 
+  // Set data-color-mode attribute on body for wmde-markdown CSS
+  useEffect(() => {
+    if (mounted) {
+      document.body.setAttribute('data-color-mode', theme);
+    }
+  }, [theme, mounted]);
+
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
