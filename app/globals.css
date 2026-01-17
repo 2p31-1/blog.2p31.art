@@ -839,3 +839,58 @@ a {
 .toc-desktop a:hover {
   color: var(--accent-11) !important;
 }
+
+/* 데스크톱 오버레이 스크롤바 - 스크롤 시에만 잠깐 표시 */
+@media (min-width: 768px) {
+  html {
+    overflow-y: overlay;
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  html:hover {
+    scrollbar-color: rgba(128, 128, 128, 0.4) transparent;
+  }
+
+  /* Webkit 브라우저 (Chrome, Safari, Edge) */
+  html::-webkit-scrollbar {
+    width: 8px;
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  html::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 4px;
+    transition: background 0.3s ease;
+  }
+
+  html:hover::-webkit-scrollbar-thumb {
+    background: rgba(128, 128, 128, 0.4);
+  }
+
+  html::-webkit-scrollbar-thumb:hover {
+    background: rgba(128, 128, 128, 0.6);
+  }
+}
+
+/* 다크 모드 스크롤바 */
+@media (min-width: 768px) {
+  .dark html:hover,
+  [data-color-mode*='dark'] html:hover {
+    scrollbar-color: rgba(200, 200, 200, 0.3) transparent;
+  }
+
+  .dark html:hover::-webkit-scrollbar-thumb,
+  [data-color-mode*='dark'] html:hover::-webkit-scrollbar-thumb {
+    background: rgba(200, 200, 200, 0.3);
+  }
+
+  .dark html::-webkit-scrollbar-thumb:hover,
+  [data-color-mode*='dark'] html::-webkit-scrollbar-thumb:hover {
+    background: rgba(200, 200, 200, 0.5);
+  }
+}
