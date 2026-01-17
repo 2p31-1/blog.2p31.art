@@ -8,6 +8,18 @@ import { config } from '@/lib/config';
 export const metadata: Metadata = {
   title: config.blogName,
   description: config.blogDescription,
+  metadataBase: new URL(config.siteUrl),
+  openGraph: {
+    title: config.blogName,
+    description: config.blogDescription,
+    siteName: config.blogName,
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary',
+    title: config.blogName,
+    description: config.blogDescription,
+  },
 };
 
 export default function RootLayout({

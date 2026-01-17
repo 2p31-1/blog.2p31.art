@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { Metadata } from 'next';
 import { getPostBySlug } from '@/lib/posts';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { HashtagList } from '@/components/HashtagList';
@@ -6,11 +7,55 @@ import { ShareButton } from '@/components/ShareButton';
 import { Box, Flex, Heading, Text, Separator } from '@radix-ui/themes';
 import { ClockIcon, CalendarIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
+import { config } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string[] }>;
+}
+
+function getAbsoluteThumbnailUrl(thumbnail: string): string {
+  if (thumbnail.startsWith('http')) {
+    return thumbnail;
+  }
+  return `${config.siteUrl}/md/${encodeURIComponent(thumbnail).replace(/%2F/g, '/')}`;
+}
+
+export async function generateMetadata({ params }: BlogPostPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const slugPath = decodeURIComponent(slug.join('/'));
+
+  try {
+    const post = getPostBySlug(slugPath);
+    if (!post) return {};
+
+    const url = `${config.siteUrl}/blog/${slug.join('/')}`;
+    const images = post.thumbnail ? [getAbsoluteThumbnailUrl(post.thumbnail)] : [];
+
+    return {
+      title: `${post.title} | ${config.blogName}`,
+      description: post.excerpt || config.blogDescription,
+      openGraph: {
+        title: post.title,
+        description: post.excerpt || config.blogDescription,
+        url,
+        siteName: config.blogName,
+        type: 'article',
+        publishedTime: post.created_at,
+        modifiedTime: post.modified_at,
+        images,
+      },
+      twitter: {
+        card: images.length > 0 ? 'summary_large_image' : 'summary',
+        title: post.title,
+        description: post.excerpt || config.blogDescription,
+        images,
+      },
+    };
+  } catch {
+    return {};
+  }
 }
 
 function formatDate(dateString: string): string {
