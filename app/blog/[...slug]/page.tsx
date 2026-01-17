@@ -4,6 +4,7 @@ import { getPostBySlug } from '@/lib/posts';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { HashtagList } from '@/components/HashtagList';
 import { ShareButton } from '@/components/ShareButton';
+import { Comments } from '@/components/Comments';
 import { Box, Flex, Heading, Text, Separator } from '@radix-ui/themes';
 import { ClockIcon, CalendarIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
@@ -209,6 +210,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           <HashtagList hashtags={post.hashtags} />
         </Box>
       )}
+
+      <Comments />
     </Box>
   );
 }
