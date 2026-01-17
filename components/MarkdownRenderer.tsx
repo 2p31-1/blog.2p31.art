@@ -13,10 +13,9 @@ import { HeadingAnchorInteraction } from './HeadingAnchorInteraction';
 interface MarkdownRendererProps {
   content: string;
   slug: string;
-  blurData?: Record<string, string>;
 }
 
-export function MarkdownRenderer({ content, slug, blurData }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, slug }: MarkdownRendererProps) {
   // Get directory from slug (e.g., "분류1/a" -> "분류1")
   const slugDir = slug.includes('/') ? slug.substring(0, slug.lastIndexOf('/')) : '';
 
@@ -69,7 +68,7 @@ export function MarkdownRenderer({ content, slug, blurData }: MarkdownRendererPr
         ]}
         components={{
           img: ({ src, alt }) => (
-            <BlurImage src={src || ''} alt={alt || ''} blurData={blurData} />
+            <BlurImage src={src || ''} alt={alt || ''} />
           ),
           pre: ({ children, ...props }) => {
             // Extract code content for copy button

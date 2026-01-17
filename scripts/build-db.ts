@@ -1,7 +1,6 @@
 import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
-import sharp from 'sharp';
 
 const MD_DIR = path.join(process.cwd(), 'md');
 const DB_PATH = path.join(process.cwd(), 'data', 'blog.db');
@@ -58,7 +57,6 @@ db.exec(`
     content TEXT NOT NULL,
     excerpt TEXT,
     thumbnail TEXT,
-    blur_data_url TEXT,
     category TEXT NOT NULL DEFAULT '',
     created_at TEXT NOT NULL,
     modified_at TEXT NOT NULL,
@@ -143,42 +141,6 @@ function extractThumbnail(content: string, slug: string): string | null {
   return null;
 }
 
-// Generate blurDataURL from image
-async function generateBlurDataURL(imagePath: string): Promise<string | null> {
-  try {
-    if (!fs.existsSync(imagePath)) {
-      return null;
-    }
-
-    const buffer = await sharp(imagePath)
-      .resize(10, 10, { fit: 'cover' })
-      .blur()
-      .toBuffer();
-
-    const base64 = buffer.toString('base64');
-    const mimeType = imagePath.endsWith('.png') ? 'image/png' : 'image/jpeg';
-    return `data:${mimeType};base64,${base64}`;
-  } catch (error) {
-    console.warn(`Failed to generate blur for ${imagePath}:`, error);
-    return null;
-  }
-}
-
-// Get full image path from thumbnail
-function getImagePath(thumbnail: string, slug: string): string | null {
-  if (thumbnail.startsWith('http')) {
-    return null; // 외부 URL은 blur 생성 불가
-  }
-
-  // 썸네일 경로에서 실제 파일 경로 계산
-  const imagePath = path.join(MD_DIR, thumbnail);
-  if (fs.existsSync(imagePath)) {
-    return imagePath;
-  }
-
-  return null;
-}
-
 // Extract category from slug (directory path)
 function extractCategory(slug: string): string {
   const parts = slug.split('/');
@@ -235,67 +197,10 @@ function getMarkdownFiles(dir: string, baseDir: string = dir): string[] {
   return files;
 }
 
-// Get all image files recursively
-function getImageFiles(dir: string, baseDir: string = dir): string[] {
-  if (!fs.existsSync(dir)) {
-    return [];
-  }
-
-  const files: string[] = [];
-  const entries = fs.readdirSync(dir, { withFileTypes: true });
-  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
-
-  for (const entry of entries) {
-    const fullPath = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...getImageFiles(fullPath, baseDir));
-    } else {
-      const ext = path.extname(entry.name).toLowerCase();
-      if (imageExtensions.includes(ext)) {
-        files.push(fullPath);
-      }
-    }
-  }
-
-  return files;
-}
-
-// Generate blur data for all images and save to JSON
-async function generateAllBlurData(): Promise<Record<string, string>> {
-  const imageFiles = getImageFiles(MD_DIR);
-  const blurData: Record<string, string> = {};
-
-  console.log(`Generating blur data for ${imageFiles.length} images...`);
-
-  for (const imagePath of imageFiles) {
-    const relativePath = path.relative(MD_DIR, imagePath).replace(/\\/g, '/');
-    const webPath = `/md/${encodeURIComponent(relativePath).replace(/%2F/g, '/')}`;
-
-    const blur = await generateBlurDataURL(imagePath);
-    if (blur) {
-      blurData[webPath] = blur;
-    }
-  }
-
-  // Save to public/blur-data.json
-  const publicDir = path.join(process.cwd(), 'public');
-  if (!fs.existsSync(publicDir)) {
-    fs.mkdirSync(publicDir, { recursive: true });
-  }
-  fs.writeFileSync(
-    path.join(publicDir, 'blur-data.json'),
-    JSON.stringify(blurData),
-    'utf-8'
-  );
-
-  console.log(`Generated blur data for ${Object.keys(blurData).length} images`);
-  return blurData;
-}
-
 // Prepare statements
 const insertPost = db.prepare(`
-  INSERT INTO posts (slug, title, content, excerpt, thumbnail, blur_data_url, category, created_at, modified_at, reading_time)
-  VALUES (@slug, @title, @content, @excerpt, @thumbnail, @blur_data_url, @category, @created_at, @modified_at, @reading_time)
+  INSERT INTO posts (slug, title, content, excerpt, thumbnail, category, created_at, modified_at, reading_time)
+  VALUES (@slug, @title, @content, @excerpt, @thumbnail, @category, @created_at, @modified_at, @reading_time)
 `);
 
 const insertHashtag = db.prepare(`
@@ -337,7 +242,7 @@ function escapeXml(text: string): string {
 }
 
 // Process all markdown files
-async function processFiles() {
+function processFiles() {
   const files = getMarkdownFiles(MD_DIR);
   console.log(`Found ${files.length} markdown files`);
 
@@ -366,15 +271,6 @@ async function processFiles() {
     const createdAt = stats.birthtime.toISOString();
     const modifiedAt = stats.mtime.toISOString();
 
-    // Generate blurDataURL for thumbnail
-    let blurDataUrl: string | null = null;
-    if (thumbnail) {
-      const imagePath = getImagePath(thumbnail, slug);
-      if (imagePath) {
-        blurDataUrl = await generateBlurDataURL(imagePath);
-      }
-    }
-
     try {
       const result = insertPost.run({
         slug,
@@ -382,7 +278,6 @@ async function processFiles() {
         content,
         excerpt,
         thumbnail,
-        blur_data_url: blurDataUrl,
         category,
         created_at: createdAt,
         modified_at: modifiedAt,
@@ -403,8 +298,7 @@ async function processFiles() {
       // Add to feed list
       postsForFeed.push({ slug, title, excerpt, created_at: createdAt });
 
-      const blurStatus = blurDataUrl ? '✓ blur' : '';
-      console.log(`Processed: ${slug} (${category || '없음'}, ${hashtags.length} tags, ${readingTime}min ${blurStatus})`);
+      console.log(`Processed: ${slug} (${category || 'root'}, ${hashtags.length} tags, ${readingTime}min)`);
     } catch (error) {
       console.error(`Error processing ${filePath}:`, error);
     }
@@ -487,7 +381,6 @@ function generatePaginationData() {
     title: string;
     excerpt: string;
     thumbnail: string | null;
-    blur_data_url: string | null;
     category: string;
     created_at: string;
     modified_at: string;
@@ -498,7 +391,6 @@ function generatePaginationData() {
     title: post.title,
     excerpt: post.excerpt,
     thumbnail: post.thumbnail,
-    blur_data_url: post.blur_data_url,
     category: post.category,
     created_at: post.created_at,
     modified_at: post.modified_at,
@@ -519,7 +411,6 @@ function generatePaginationData() {
       title: string;
       excerpt: string;
       thumbnail: string | null;
-      blur_data_url: string | null;
       category: string;
       created_at: string;
       modified_at: string;
@@ -587,7 +478,6 @@ function generatePaginationData() {
         title: string;
         excerpt: string;
         thumbnail: string | null;
-        blur_data_url: string | null;
         category: string;
         created_at: string;
         modified_at: string;
@@ -642,7 +532,6 @@ function generatePaginationData() {
         title: string;
         excerpt: string;
         thumbnail: string | null;
-        blur_data_url: string | null;
         category: string;
         created_at: string;
         modified_at: string;
@@ -675,10 +564,9 @@ function generatePaginationData() {
 }
 
 // Run
-async function main() {
+function main() {
   copyMdToPublic();
-  await generateAllBlurData();
-  await processFiles();
+  processFiles();
   generatePaginationData();
 }
 
