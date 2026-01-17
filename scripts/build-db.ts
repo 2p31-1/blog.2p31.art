@@ -235,6 +235,63 @@ function getMarkdownFiles(dir: string, baseDir: string = dir): string[] {
   return files;
 }
 
+// Get all image files recursively
+function getImageFiles(dir: string, baseDir: string = dir): string[] {
+  if (!fs.existsSync(dir)) {
+    return [];
+  }
+
+  const files: string[] = [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  const imageExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.webp'];
+
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...getImageFiles(fullPath, baseDir));
+    } else {
+      const ext = path.extname(entry.name).toLowerCase();
+      if (imageExtensions.includes(ext)) {
+        files.push(fullPath);
+      }
+    }
+  }
+
+  return files;
+}
+
+// Generate blur data for all images and save to JSON
+async function generateAllBlurData(): Promise<Record<string, string>> {
+  const imageFiles = getImageFiles(MD_DIR);
+  const blurData: Record<string, string> = {};
+
+  console.log(`Generating blur data for ${imageFiles.length} images...`);
+
+  for (const imagePath of imageFiles) {
+    const relativePath = path.relative(MD_DIR, imagePath).replace(/\\/g, '/');
+    const webPath = `/md/${encodeURIComponent(relativePath).replace(/%2F/g, '/')}`;
+
+    const blur = await generateBlurDataURL(imagePath);
+    if (blur) {
+      blurData[webPath] = blur;
+    }
+  }
+
+  // Save to public/blur-data.json
+  const publicDir = path.join(process.cwd(), 'public');
+  if (!fs.existsSync(publicDir)) {
+    fs.mkdirSync(publicDir, { recursive: true });
+  }
+  fs.writeFileSync(
+    path.join(publicDir, 'blur-data.json'),
+    JSON.stringify(blurData),
+    'utf-8'
+  );
+
+  console.log(`Generated blur data for ${Object.keys(blurData).length} images`);
+  return blurData;
+}
+
 // Prepare statements
 const insertPost = db.prepare(`
   INSERT INTO posts (slug, title, content, excerpt, thumbnail, blur_data_url, category, created_at, modified_at, reading_time)
@@ -407,6 +464,7 @@ function generateFeedXml(posts: Array<{ slug: string; title: string; excerpt: st
 // Run
 async function main() {
   copyMdToPublic();
+  await generateAllBlurData();
   await processFiles();
 }
 

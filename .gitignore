@@ -32,6 +32,7 @@ data/
 # Build-generated static files
 public/md/
 public/feed.xml
+public/blur-data.json
 
 # IDE
 .idea/

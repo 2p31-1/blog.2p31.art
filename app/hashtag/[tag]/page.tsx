@@ -4,7 +4,7 @@ import { PostList } from '@/components/PostList';
 import { Box, Flex, Heading, Badge, Text } from '@radix-ui/themes';
 import { config } from '@/lib/config';
 
-export const revalidate = 3600; // 1시간마다 재검증 (CDN 캐싱 활성화)
+export const revalidate = false; // 완전 정적 (재배포 시에만 갱신)
 
 // SSG: 빌드 시점에 모든 해시태그 페이지 생성
 export function generateStaticParams() {

@@ -10,8 +10,23 @@ import { Box, Flex, Heading, Text, Separator } from '@radix-ui/themes';
 import { ClockIcon, CalendarIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
 import { config } from '@/lib/config';
+import fs from 'fs';
+import path from 'path';
 
-export const revalidate = 3600; // 1시간마다 재검증 (CDN 캐싱 활성화)
+// Load blur data at build time
+function getBlurData(): Record<string, string> {
+  try {
+    const blurDataPath = path.join(process.cwd(), 'public', 'blur-data.json');
+    if (fs.existsSync(blurDataPath)) {
+      return JSON.parse(fs.readFileSync(blurDataPath, 'utf-8'));
+    }
+  } catch (error) {
+    console.error('Failed to load blur data:', error);
+  }
+  return {};
+}
+
+export const revalidate = false; // 완전 정적 (재배포 시에만 갱신)
 
 // SSG: 빌드 시점에 모든 포스트 페이지 생성
 export function generateStaticParams() {
@@ -100,6 +115,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     notFound();
   }
 
+  const blurData = getBlurData();
   const isModified = post.created_at !== post.modified_at;
 
   // Remove first h1 title and hashtag lines from content for display
@@ -220,9 +236,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       </Box>
 
       {/* 본문 */}
-      {beforeHeading && <MarkdownRenderer content={beforeHeading} slug={post.slug} />}
+      {beforeHeading && <MarkdownRenderer content={beforeHeading} slug={post.slug} blurData={blurData} />}
       <TableOfContents content={contentWithoutHashtags} variant="mobile" />
-      <MarkdownRenderer content={fromHeading} slug={post.slug} />
+      <MarkdownRenderer content={fromHeading} slug={post.slug} blurData={blurData} />
 
       {post.hashtags.length > 0 && (
         <Box mt="8" pt="6" style={{ borderTop: '1px solid var(--gray-4)' }}>
