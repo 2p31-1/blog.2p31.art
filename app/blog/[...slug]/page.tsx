@@ -4,6 +4,7 @@ import { getPostBySlug } from '@/lib/posts';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { HashtagList } from '@/components/HashtagList';
 import { ShareButton } from '@/components/ShareButton';
+import { TableOfContents } from '@/components/TableOfContents';
 import { Comments } from '@/components/Comments';
 import { Box, Flex, Heading, Text, Separator } from '@radix-ui/themes';
 import { ClockIcon, CalendarIcon, ChevronRightIcon } from '@radix-ui/react-icons';
@@ -108,6 +109,14 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
     })
     .join('\n');
 
+  // 첫 heading 위치 찾기
+  const contentLines = contentWithoutHashtags.split('\n');
+  const firstHeadingIndex = contentLines.findIndex((line) => /^#{1,6}\s+.+$/.test(line.trim()));
+
+  // 첫 heading 기준으로 콘텐츠 분리
+  const beforeHeading = firstHeadingIndex > 0 ? contentLines.slice(0, firstHeadingIndex).join('\n') : '';
+  const fromHeading = firstHeadingIndex >= 0 ? contentLines.slice(firstHeadingIndex).join('\n') : contentWithoutHashtags;
+
   // Build category breadcrumb
   const categoryParts = post.category ? post.category.split('/') : [];
   const categoryBreadcrumbs = categoryParts.map((part, index) => ({
@@ -116,8 +125,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   }));
 
   return (
-    <Box>
+    <Box className="blog-post-layout">
+      {/* 헤더 영역 */}
       <Box
+        className="blog-post-header"
         mb="6"
         py="4"
         style={{
@@ -200,7 +211,10 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
         <Separator size="4" />
       </Box>
 
-      <MarkdownRenderer content={contentWithoutHashtags} slug={post.slug} />
+      {/* 본문 */}
+      {beforeHeading && <MarkdownRenderer content={beforeHeading} slug={post.slug} />}
+      <TableOfContents content={contentWithoutHashtags} variant="mobile" />
+      <MarkdownRenderer content={fromHeading} slug={post.slug} />
 
       {post.hashtags.length > 0 && (
         <Box mt="8" pt="6" style={{ borderTop: '1px solid var(--gray-4)' }}>
@@ -212,6 +226,11 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       )}
 
       <Comments />
+
+      {/* PC 사이드 목차 */}
+      <div className="blog-post-sidebar">
+        <TableOfContents content={contentWithoutHashtags} variant="desktop" />
+      </div>
     </Box>
   );
 }

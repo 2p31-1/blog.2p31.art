@@ -149,3 +149,48 @@ a {
     display: block;
   }
 }
+
+/* Blog post layout with TOC */
+.blog-post-layout {
+  position: relative;
+}
+
+.blog-post-sidebar {
+  display: none;
+}
+
+/* 모바일: 목차는 본문 내 toc-mobile만 표시 */
+.toc-mobile {
+  display: block;
+}
+
+.toc-desktop {
+  display: none;
+}
+
+/* PC: 사이드바를 오른쪽에 고정 */
+@media (min-width: 1400px) {
+  .blog-post-sidebar {
+    display: block;
+    position: fixed;
+    top: 100px;
+    left: calc(50% + 500px);
+    width: 220px;
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+  }
+
+  .toc-mobile {
+    display: none;
+  }
+
+  .toc-desktop {
+    display: block;
+  }
+}
+
+/* TOC 링크 호버 효과 */
+.toc-mobile a:hover,
+.toc-desktop a:hover {
+  color: var(--accent-11) !important;
+}
