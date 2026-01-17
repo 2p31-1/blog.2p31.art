@@ -1,17 +1,17 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { useTheme } from 'next-themes';
+import { useTheme } from './ThemeProvider';
 import { Box } from '@radix-ui/themes';
 
 export function Comments() {
   const ref = useRef<HTMLDivElement>(null);
-  const { resolvedTheme } = useTheme();
+  const { theme } = useTheme();
 
   useEffect(() => {
     if (!ref.current) return;
 
-    const theme = resolvedTheme === 'dark' ? 'github-dark' : 'github-light';
+    const utterancesTheme = theme === 'dark' ? 'github-dark' : 'github-light';
 
     // Remove existing utterances if any
     const existingScript = ref.current.querySelector('.utterances');
@@ -23,12 +23,12 @@ export function Comments() {
     script.src = 'https://utteranc.es/client.js';
     script.setAttribute('repo', 'blog.2p31.art');
     script.setAttribute('issue-term', 'pathname');
-    script.setAttribute('theme', theme);
+    script.setAttribute('theme', utterancesTheme);
     script.setAttribute('crossorigin', 'anonymous');
     script.async = true;
 
     ref.current.appendChild(script);
-  }, [resolvedTheme]);
+  }, [theme]);
 
   return (
     <Box mt="8" pt="6" style={{ borderTop: '1px solid var(--gray-4)' }}>
