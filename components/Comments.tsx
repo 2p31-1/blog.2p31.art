@@ -8,26 +8,31 @@ export function Comments() {
   const ref = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
 
+  // 초기 마운트 시 한 번만 스크립트 로드
   useEffect(() => {
-    if (!ref.current) return;
-
-    const utterancesTheme = theme === 'dark' ? 'github-dark' : 'github-light';
-
-    // Remove existing utterances if any
-    const existingScript = ref.current.querySelector('.utterances');
-    if (existingScript) {
-      existingScript.remove();
-    }
+    if (!ref.current || ref.current.querySelector('.utterances')) return;
 
     const script = document.createElement('script');
     script.src = 'https://utteranc.es/client.js';
     script.setAttribute('repo', '2p31-1/blog.2p31.art');
     script.setAttribute('issue-term', 'pathname');
-    script.setAttribute('theme', utterancesTheme);
+    script.setAttribute('theme', theme === 'dark' ? 'github-dark' : 'github-light');
     script.setAttribute('crossorigin', 'anonymous');
     script.async = true;
 
     ref.current.appendChild(script);
+  }, []);
+
+  // 테마 변경 시 postMessage로 테마만 변경
+  useEffect(() => {
+    const iframe = document.querySelector<HTMLIFrameElement>('.utterances-frame');
+    if (iframe) {
+      const utterancesTheme = theme === 'dark' ? 'github-dark' : 'github-light';
+      iframe.contentWindow?.postMessage(
+        { type: 'set-theme', theme: utterancesTheme },
+        'https://utteranc.es'
+      );
+    }
   }, [theme]);
 
   return (
