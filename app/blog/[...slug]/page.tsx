@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getPostBySlug } from '@/lib/posts';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { HashtagList } from '@/components/HashtagList';
+import { ShareButton } from '@/components/ShareButton';
 import { Box, Flex, Heading, Text, Separator } from '@radix-ui/themes';
 import { ClockIcon, CalendarIcon, ChevronRightIcon } from '@radix-ui/react-icons';
 import Link from 'next/link';
@@ -140,6 +141,8 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
                 {post.reading_time}분 소요
               </Text>
             </Flex>
+
+            <ShareButton title={post.title} />
           </Flex>
 
           {post.hashtags.length > 0 && (
