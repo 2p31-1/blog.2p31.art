@@ -5,7 +5,7 @@ import { CategoryTree } from '@/components/CategoryTree';
 import { Box } from '@radix-ui/themes';
 import { config } from '@/lib/config';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // 1시간마다 재검증 (CDN 캐싱 활성화)
 
 export default function Home() {
   let posts: PostWithHashtags[] = [];

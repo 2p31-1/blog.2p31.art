@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { Metadata } from 'next';
-import { getPostBySlug } from '@/lib/posts';
+import { getPostBySlug, getAllPostSlugs } from '@/lib/posts';
 import { MarkdownRenderer } from '@/components/MarkdownRenderer';
 import { HashtagList } from '@/components/HashtagList';
 import { ShareButton } from '@/components/ShareButton';
@@ -11,7 +11,15 @@ import { ClockIcon, CalendarIcon, ChevronRightIcon } from '@radix-ui/react-icons
 import Link from 'next/link';
 import { config } from '@/lib/config';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // 1시간마다 재검증 (CDN 캐싱 활성화)
+
+// SSG: 빌드 시점에 모든 포스트 페이지 생성
+export function generateStaticParams() {
+  const slugs = getAllPostSlugs();
+  return slugs.map((slug) => ({
+    slug: slug.split('/'),
+  }));
+}
 
 interface BlogPostPageProps {
   params: Promise<{ slug: string[] }>;

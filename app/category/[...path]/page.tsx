@@ -1,4 +1,4 @@
-import { getPostsByCategory, getPostsCountByCategory } from '@/lib/posts';
+import { getPostsByCategory, getPostsCountByCategory, getAllCategoryPaths } from '@/lib/posts';
 import { PostWithHashtags } from '@/lib/db';
 import { PostList } from '@/components/PostList';
 import { CategoryTree } from '@/components/CategoryTree';
@@ -6,7 +6,15 @@ import { Box, Flex, Heading, Text } from '@radix-ui/themes';
 import { config } from '@/lib/config';
 import Link from 'next/link';
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600; // 1시간마다 재검증 (CDN 캐싱 활성화)
+
+// SSG: 빌드 시점에 모든 카테고리 페이지 생성
+export function generateStaticParams() {
+  const paths = getAllCategoryPaths();
+  return paths.map((path) => ({
+    path: path.split('/'),
+  }));
+}
 
 interface CategoryPageProps {
   params: Promise<{ path: string[] }>;

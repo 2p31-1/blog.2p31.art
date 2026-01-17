@@ -167,6 +167,38 @@ export function getPostsCountByCategory(category: string): number {
   return result.count;
 }
 
+// Get all post slugs for SSG
+export function getAllPostSlugs(): string[] {
+  const db = getDb();
+  const posts = db.prepare('SELECT slug FROM posts').all() as { slug: string }[];
+  return posts.map(p => p.slug);
+}
+
+// Get all unique category paths for SSG
+export function getAllCategoryPaths(): string[] {
+  const db = getDb();
+  const categories = db.prepare(`
+    SELECT DISTINCT category FROM posts WHERE category != ''
+  `).all() as { category: string }[];
+
+  // 상위 카테고리도 포함 (예: "dev/web" -> ["dev", "dev/web"])
+  const allPaths = new Set<string>();
+  for (const { category } of categories) {
+    const parts = category.split('/');
+    for (let i = 1; i <= parts.length; i++) {
+      allPaths.add(parts.slice(0, i).join('/'));
+    }
+  }
+  return Array.from(allPaths);
+}
+
+// Get all hashtag names for SSG
+export function getAllHashtagNames(): string[] {
+  const db = getDb();
+  const hashtags = db.prepare('SELECT name FROM hashtags').all() as { name: string }[];
+  return hashtags.map(h => h.name);
+}
+
 // Search posts including category search
 export function searchPostsWithCategory(query: string, limit: number = 10): PostWithHashtags[] {
   const db = getDb();
