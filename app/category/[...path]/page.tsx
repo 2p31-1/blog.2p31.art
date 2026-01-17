@@ -34,6 +34,9 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
     console.error('Error loading posts by category:', error);
   }
 
+  const totalPages = Math.ceil(totalCount / config.postsPerPage);
+  const hasMore = totalCount > config.postsPerPage;
+
   // Build breadcrumb
   const parts = categoryPath.split('/');
   const breadcrumbs = parts.map((part, index) => ({
@@ -77,7 +80,13 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
 
       <CategoryTree defaultOpen />
 
-      <PostList posts={posts} />
+      <PostList
+        posts={posts}
+        paginationPath={`/data/category/${categoryPath}`}
+        initialPage={1}
+        totalPages={totalPages}
+        hasMore={hasMore}
+      />
     </Box>
   );
 }

@@ -32,6 +32,9 @@ export default async function HashtagPage({ params }: HashtagPageProps) {
     console.error('Error loading posts by hashtag:', error);
   }
 
+  const totalPages = Math.ceil(totalCount / config.postsPerPage);
+  const hasMore = totalCount > config.postsPerPage;
+
   return (
     <Box>
       <Flex align="center" gap="3" mb="6">
@@ -45,7 +48,13 @@ export default async function HashtagPage({ params }: HashtagPageProps) {
         </Text>
       </Flex>
 
-      <PostList posts={posts} />
+      <PostList
+        posts={posts}
+        paginationPath={`/data/hashtag/${decodedTag}`}
+        initialPage={1}
+        totalPages={totalPages}
+        hasMore={hasMore}
+      />
     </Box>
   );
 }

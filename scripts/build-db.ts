@@ -461,11 +461,225 @@ function generateFeedXml(posts: Array<{ slug: string; title: string; excerpt: st
   console.log(`\nGenerated feed.xml with ${sortedPosts.length} items`);
 }
 
+// Generate pagination JSON files
+function generatePaginationData() {
+  const postsPerPage = 20;
+  const dataDir = path.join(process.cwd(), 'public', 'data');
+
+  // Ensure data directory exists and clean it
+  if (fs.existsSync(dataDir)) {
+    fs.rmSync(dataDir, { recursive: true });
+  }
+  fs.mkdirSync(dataDir, { recursive: true });
+
+  // Helper to write JSON
+  const writeJson = (filePath: string, data: unknown) => {
+    const dir = path.dirname(filePath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(filePath, JSON.stringify(data), 'utf-8');
+  };
+
+  // Helper to get post data without content (for list)
+  const getPostListData = (post: {
+    slug: string;
+    title: string;
+    excerpt: string;
+    thumbnail: string | null;
+    blur_data_url: string | null;
+    category: string;
+    created_at: string;
+    modified_at: string;
+    reading_time: number;
+    hashtags: string[];
+  }) => ({
+    slug: post.slug,
+    title: post.title,
+    excerpt: post.excerpt,
+    thumbnail: post.thumbnail,
+    blur_data_url: post.blur_data_url,
+    category: post.category,
+    created_at: post.created_at,
+    modified_at: post.modified_at,
+    reading_time: post.reading_time,
+    hashtags: post.hashtags,
+  });
+
+  // Re-open database for reading
+  const readDb = new Database(DB_PATH, { readonly: true });
+
+  // Get all posts with hashtags
+  const getAllPostsWithHashtags = (limit: number, offset: number) => {
+    const posts = readDb.prepare(`
+      SELECT * FROM posts ORDER BY created_at DESC LIMIT ? OFFSET ?
+    `).all(limit, offset) as Array<{
+      id: number;
+      slug: string;
+      title: string;
+      excerpt: string;
+      thumbnail: string | null;
+      blur_data_url: string | null;
+      category: string;
+      created_at: string;
+      modified_at: string;
+      reading_time: number;
+    }>;
+
+    return posts.map(post => {
+      const hashtags = readDb.prepare(`
+        SELECT h.name FROM hashtags h
+        JOIN post_hashtags ph ON h.id = ph.hashtag_id
+        WHERE ph.post_id = ?
+      `).all(post.id) as { name: string }[];
+      return { ...post, hashtags: hashtags.map(h => h.name) };
+    });
+  };
+
+  // 1. Generate main posts pagination
+  const totalPosts = (readDb.prepare('SELECT COUNT(*) as count FROM posts').get() as { count: number }).count;
+  const totalPages = Math.ceil(totalPosts / postsPerPage);
+
+  console.log(`\nGenerating pagination data...`);
+
+  for (let page = 1; page <= totalPages; page++) {
+    const offset = (page - 1) * postsPerPage;
+    const posts = getAllPostsWithHashtags(postsPerPage, offset);
+    writeJson(path.join(dataDir, 'posts', `page-${page}.json`), {
+      posts: posts.map(getPostListData),
+      page,
+      totalPages,
+      totalPosts,
+      hasMore: page < totalPages,
+    });
+  }
+  console.log(`  - posts: ${totalPages} pages`);
+
+  // 2. Generate category pagination
+  const categories = readDb.prepare(`
+    SELECT DISTINCT category FROM posts WHERE category != ''
+  `).all() as { category: string }[];
+
+  // Get all unique category paths (including parent categories)
+  const allCategoryPaths = new Set<string>();
+  for (const { category } of categories) {
+    const parts = category.split('/');
+    for (let i = 1; i <= parts.length; i++) {
+      allCategoryPaths.add(parts.slice(0, i).join('/'));
+    }
+  }
+
+  for (const categoryPath of Array.from(allCategoryPaths)) {
+    const categoryTotal = (readDb.prepare(`
+      SELECT COUNT(*) as count FROM posts WHERE category = ? OR category LIKE ?
+    `).get(categoryPath, `${categoryPath}/%`) as { count: number }).count;
+
+    const categoryTotalPages = Math.ceil(categoryTotal / postsPerPage);
+
+    for (let page = 1; page <= categoryTotalPages; page++) {
+      const offset = (page - 1) * postsPerPage;
+      const posts = readDb.prepare(`
+        SELECT * FROM posts WHERE category = ? OR category LIKE ?
+        ORDER BY created_at DESC LIMIT ? OFFSET ?
+      `).all(categoryPath, `${categoryPath}/%`, postsPerPage, offset) as Array<{
+        id: number;
+        slug: string;
+        title: string;
+        excerpt: string;
+        thumbnail: string | null;
+        blur_data_url: string | null;
+        category: string;
+        created_at: string;
+        modified_at: string;
+        reading_time: number;
+      }>;
+
+      const postsWithHashtags = posts.map(post => {
+        const hashtags = readDb.prepare(`
+          SELECT h.name FROM hashtags h
+          JOIN post_hashtags ph ON h.id = ph.hashtag_id
+          WHERE ph.post_id = ?
+        `).all(post.id) as { name: string }[];
+        return { ...post, hashtags: hashtags.map(h => h.name) };
+      });
+
+      writeJson(path.join(dataDir, 'category', categoryPath, `page-${page}.json`), {
+        posts: postsWithHashtags.map(getPostListData),
+        page,
+        totalPages: categoryTotalPages,
+        totalPosts: categoryTotal,
+        hasMore: page < categoryTotalPages,
+        category: categoryPath,
+      });
+    }
+  }
+  console.log(`  - categories: ${allCategoryPaths.size} categories`);
+
+  // 3. Generate hashtag pagination
+  const hashtags = readDb.prepare('SELECT name FROM hashtags').all() as { name: string }[];
+
+  for (const { name: hashtag } of hashtags) {
+    const hashtagTotal = (readDb.prepare(`
+      SELECT COUNT(*) as count FROM posts p
+      JOIN post_hashtags ph ON p.id = ph.post_id
+      JOIN hashtags h ON ph.hashtag_id = h.id
+      WHERE h.name = ?
+    `).get(hashtag) as { count: number }).count;
+
+    const hashtagTotalPages = Math.ceil(hashtagTotal / postsPerPage);
+
+    for (let page = 1; page <= hashtagTotalPages; page++) {
+      const offset = (page - 1) * postsPerPage;
+      const posts = readDb.prepare(`
+        SELECT p.* FROM posts p
+        JOIN post_hashtags ph ON p.id = ph.post_id
+        JOIN hashtags h ON ph.hashtag_id = h.id
+        WHERE h.name = ?
+        ORDER BY p.created_at DESC LIMIT ? OFFSET ?
+      `).all(hashtag, postsPerPage, offset) as Array<{
+        id: number;
+        slug: string;
+        title: string;
+        excerpt: string;
+        thumbnail: string | null;
+        blur_data_url: string | null;
+        category: string;
+        created_at: string;
+        modified_at: string;
+        reading_time: number;
+      }>;
+
+      const postsWithHashtags = posts.map(post => {
+        const postHashtags = readDb.prepare(`
+          SELECT h.name FROM hashtags h
+          JOIN post_hashtags ph ON h.id = ph.hashtag_id
+          WHERE ph.post_id = ?
+        `).all(post.id) as { name: string }[];
+        return { ...post, hashtags: postHashtags.map(h => h.name) };
+      });
+
+      writeJson(path.join(dataDir, 'hashtag', hashtag, `page-${page}.json`), {
+        posts: postsWithHashtags.map(getPostListData),
+        page,
+        totalPages: hashtagTotalPages,
+        totalPosts: hashtagTotal,
+        hasMore: page < hashtagTotalPages,
+        hashtag,
+      });
+    }
+  }
+  console.log(`  - hashtags: ${hashtags.length} hashtags`);
+
+  readDb.close();
+  console.log(`Pagination data generated in public/data/`);
+}
+
 // Run
 async function main() {
   copyMdToPublic();
   await generateAllBlurData();
   await processFiles();
+  generatePaginationData();
 }
 
 main();
