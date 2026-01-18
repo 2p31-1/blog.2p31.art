@@ -45,30 +45,32 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   }));
 
   return (
-    <Box>
+    <section>
       <Box mb="6">
-        <Flex align="center" gap="2" mb="2" wrap="wrap">
-          <Link href="/" style={{ textDecoration: 'none' }}>
-            <Text size="2" color="gray">전체</Text>
-          </Link>
-          {breadcrumbs.map((crumb, index) => (
-            <Flex key={crumb.path} align="center" gap="2">
-              <Text size="2" color="gray">/</Text>
-              <Link
-                href={`/category/${encodeURIComponent(crumb.path)}`}
-                style={{ textDecoration: 'none' }}
-              >
-                <Text
-                  size="2"
-                  color={index === breadcrumbs.length - 1 ? undefined : 'gray'}
-                  weight={index === breadcrumbs.length - 1 ? 'medium' : undefined}
+        <nav aria-label="breadcrumb">
+          <Flex align="center" gap="2" mb="2" wrap="wrap">
+            <Link href="/" style={{ textDecoration: 'none' }}>
+              <Text size="2" color="gray">전체</Text>
+            </Link>
+            {breadcrumbs.map((crumb, index) => (
+              <Flex key={crumb.path} align="center" gap="2">
+                <Text size="2" color="gray">/</Text>
+                <Link
+                  href={`/category/${encodeURIComponent(crumb.path)}`}
+                  style={{ textDecoration: 'none' }}
                 >
-                  {crumb.name}
-                </Text>
-              </Link>
-            </Flex>
-          ))}
-        </Flex>
+                  <Text
+                    size="2"
+                    color={index === breadcrumbs.length - 1 ? undefined : 'gray'}
+                    weight={index === breadcrumbs.length - 1 ? 'medium' : undefined}
+                  >
+                    {crumb.name}
+                  </Text>
+                </Link>
+              </Flex>
+            ))}
+          </Flex>
+        </nav>
 
         <Heading size="6" mb="2">
           {parts[parts.length - 1]}
@@ -87,6 +89,6 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
         totalPages={totalPages}
         hasMore={hasMore}
       />
-    </Box>
+    </section>
   );
 }

@@ -133,16 +133,16 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   }));
 
   return (
-    <Box className="blog-post-layout">
+    <article className="blog-post-layout">
       {/* 헤더 영역 */}
-      <Box
+      <header
         className="blog-post-header"
-        mb="6"
-        py="4"
         style={{
           position: 'relative',
           borderRadius: 'var(--radius-3)',
           overflow: 'hidden',
+          marginBottom: 'var(--space-6)',
+          padding: 'var(--space-4) 0',
         }}
       >
         {post.thumbnail && (
@@ -168,22 +168,24 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
           {/* Category breadcrumb */}
           {categoryBreadcrumbs.length > 0 && (
-            <Flex align="center" gap="1" mb="4" wrap="wrap">
-              <Link href="/" style={{ textDecoration: 'none' }}>
-                <Text size="2" color="gray">전체</Text>
-              </Link>
-              {categoryBreadcrumbs.map((crumb) => (
-                <Flex key={crumb.path} align="center" gap="1">
-                  <ChevronRightIcon width="12" height="12" color="gray" />
-                  <Link
-                    href={`/category/${encodeURIComponent(crumb.path)}`}
-                    style={{ textDecoration: 'none' }}
-                  >
-                    <Text size="2" color="gray">{crumb.name}</Text>
-                  </Link>
-                </Flex>
-              ))}
-            </Flex>
+            <nav aria-label="breadcrumb">
+              <Flex align="center" gap="1" mb="4" wrap="wrap">
+                <Link href="/" style={{ textDecoration: 'none' }}>
+                  <Text size="2" color="gray">전체</Text>
+                </Link>
+                {categoryBreadcrumbs.map((crumb) => (
+                  <Flex key={crumb.path} align="center" gap="1">
+                    <ChevronRightIcon width="12" height="12" color="gray" />
+                    <Link
+                      href={`/category/${encodeURIComponent(crumb.path)}`}
+                      style={{ textDecoration: 'none' }}
+                    >
+                      <Text size="2" color="gray">{crumb.name}</Text>
+                    </Link>
+                  </Flex>
+                ))}
+              </Flex>
+            </nav>
           )}
 
           <Flex gap="4" mb="4" wrap="wrap" align="center">
@@ -217,7 +219,7 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           )}
         </Box>
         <Separator size="4" />
-      </Box>
+      </header>
 
       {/* 본문 */}
       {beforeHeading && <MarkdownRenderer content={beforeHeading} slug={post.slug} />}
@@ -236,9 +238,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
       <Comments />
 
       {/* PC 사이드 목차 */}
-      <div className="blog-post-sidebar">
+      <aside className="blog-post-sidebar">
         <TableOfContents content={contentWithoutHashtags} variant="desktop" />
-      </div>
-    </Box>
+      </aside>
+    </article>
   );
 }

@@ -12,15 +12,14 @@ export function Header() {
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
   return (
-    <Box
-      py="4"
-      px="4"
+    <header
       style={{
         borderBottom: '1px solid var(--gray-4)',
         position: 'sticky',
         top: 0,
         backgroundColor: 'var(--color-background)',
         zIndex: 50,
+        padding: 'var(--space-4)',
       }}
     >
       <Box style={{ maxWidth: 'var(--container-3)', margin: '0 auto' }}>
@@ -77,6 +76,6 @@ export function Header() {
           )}
         </div>
       </Box>
-    </Box>
+    </header>
   );
 }

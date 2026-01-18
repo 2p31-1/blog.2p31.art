@@ -77,7 +77,7 @@ export function TableOfContents({ content, variant = 'mobile' }: TableOfContents
 
   if (variant === 'mobile') {
     return (
-      <div className="toc-mobile" style={{ marginTop: '24px', marginBottom: '24px' }}>
+      <nav className="toc-mobile" aria-label="목차" style={{ marginTop: '24px', marginBottom: '24px' }}>
         <div
           style={{
             padding: '16px',
@@ -89,32 +89,34 @@ export function TableOfContents({ content, variant = 'mobile' }: TableOfContents
           <div style={{ fontSize: '14px', fontWeight: 500, marginBottom: '12px', color: 'var(--gray-11)' }}>
             목차
           </div>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+          <ul style={{ display: 'flex', flexDirection: 'column', gap: '6px', listStyle: 'none', margin: 0, padding: 0 }}>
             {headings.map(({ id, text, level }) => (
-              <a
-                key={id}
-                href={`#${id}`}
-                onClick={(e) => handleClick(e, id)}
-                style={{
-                  paddingLeft: `${(level - minLevel) * 12}px`,
-                  fontSize: '14px',
-                  color: activeId === id ? 'var(--accent-11)' : 'var(--gray-11)',
-                  textDecoration: 'none',
-                  lineHeight: 1.5,
-                  transition: 'color 0.2s',
-                }}
-              >
-                {text}
-              </a>
+              <li key={id}>
+                <a
+                  href={`#${id}`}
+                  onClick={(e) => handleClick(e, id)}
+                  style={{
+                    paddingLeft: `${(level - minLevel) * 12}px`,
+                    fontSize: '14px',
+                    color: activeId === id ? 'var(--accent-11)' : 'var(--gray-11)',
+                    textDecoration: 'none',
+                    lineHeight: 1.5,
+                    transition: 'color 0.2s',
+                    display: 'block',
+                  }}
+                >
+                  {text}
+                </a>
+              </li>
             ))}
-          </nav>
+          </ul>
         </div>
-      </div>
+      </nav>
     );
   }
 
   return (
-    <div className="toc-desktop">
+    <nav className="toc-desktop" aria-label="목차">
       <div
         style={{
           maxHeight: 'calc(100vh - 120px)',
@@ -124,35 +126,39 @@ export function TableOfContents({ content, variant = 'mobile' }: TableOfContents
         <div style={{ fontSize: '11px', fontWeight: 500, marginBottom: '12px', color: 'var(--gray-9)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
           On this page
         </div>
-        <nav
+        <ul
           style={{
             display: 'flex',
             flexDirection: 'column',
             gap: '4px',
             borderLeft: '1px solid var(--gray-4)',
             paddingLeft: '12px',
+            listStyle: 'none',
+            margin: 0,
           }}
         >
           {headings.map(({ id, text, level }) => (
-            <a
-              key={id}
-              href={`#${id}`}
-              onClick={(e) => handleClick(e, id)}
-              style={{
-                paddingLeft: `${(level - minLevel) * 10}px`,
-                fontSize: '13px',
-                color: activeId === id ? 'var(--accent-11)' : 'var(--gray-10)',
-                fontWeight: activeId === id ? 500 : 400,
-                textDecoration: 'none',
-                lineHeight: 1.6,
-                transition: 'color 0.15s, font-weight 0.15s',
-              }}
-            >
-              {text}
-            </a>
+            <li key={id}>
+              <a
+                href={`#${id}`}
+                onClick={(e) => handleClick(e, id)}
+                style={{
+                  paddingLeft: `${(level - minLevel) * 10}px`,
+                  fontSize: '13px',
+                  color: activeId === id ? 'var(--accent-11)' : 'var(--gray-10)',
+                  fontWeight: activeId === id ? 500 : 400,
+                  textDecoration: 'none',
+                  lineHeight: 1.6,
+                  transition: 'color 0.15s, font-weight 0.15s',
+                  display: 'block',
+                }}
+              >
+                {text}
+              </a>
+            </li>
           ))}
-        </nav>
+        </ul>
       </div>
-    </div>
+    </nav>
   );
 }

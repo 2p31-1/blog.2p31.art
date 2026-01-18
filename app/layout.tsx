@@ -36,9 +36,9 @@ export default function RootLayout({
         <ThemeProvider>
           <Box pb="9" style={{ minHeight: '100vh' }}>
             <Header />
-            <Box px="4" pt="6" pb="9" style={{ maxWidth: 'var(--container-3)', margin: '0 auto' }}>
+            <main style={{ maxWidth: 'var(--container-3)', margin: '0 auto', padding: 'var(--space-6) var(--space-4) var(--space-9)' }}>
               {children}
-            </Box>
+            </main>
           </Box>
         </ThemeProvider>
       </body>
