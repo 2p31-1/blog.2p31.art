@@ -29,9 +29,22 @@ function copyDirRecursive(src: string, dest: string) {
   fs.mkdirSync(dest, { recursive: true });
   const entries = fs.readdirSync(src, { withFileTypes: true });
 
+  // NFC 정규화된 이름으로 그룹화 (중복 처리)
+  const normalizedEntries = new Map<string, { entry: fs.Dirent; srcPath: string; mtime: Date }>();
+
   for (const entry of entries) {
     const srcPath = path.join(src, entry.name);
-    const destPath = path.join(dest, entry.name);
+    const normalizedName = entry.name.normalize('NFC');
+    const stats = fs.statSync(srcPath);
+
+    const existing = normalizedEntries.get(normalizedName);
+    if (!existing || stats.mtime > existing.mtime) {
+      normalizedEntries.set(normalizedName, { entry, srcPath, mtime: stats.mtime });
+    }
+  }
+
+  for (const [normalizedName, { entry, srcPath }] of normalizedEntries) {
+    const destPath = path.join(dest, normalizedName);
 
     if (entry.isDirectory()) {
       copyDirRecursive(srcPath, destPath);
@@ -110,9 +123,9 @@ function calculateReadingTime(content: string): number {
 function extractTitle(content: string, filename: string): string {
   const match = content.match(/^#\s+(.+)$/m);
   if (match) {
-    return match[1].trim();
+    return match[1].trim().normalize('NFC');
   }
-  return filename.replace(/\.md$/, '');
+  return filename.replace(/\.md$/, '').normalize('NFC');
 }
 
 // Extract hashtags from content (at the end of file)
@@ -120,7 +133,7 @@ function extractHashtags(content: string): string[] {
   const lines = content.trim().split('\n');
   const lastLines = lines.slice(-5).join('\n'); // Check last 5 lines
   const hashtags = lastLines.match(/#([가-힣a-zA-Z0-9_]+)/g) || [];
-  return Array.from(new Set(hashtags.map(tag => tag.substring(1))));
+  return Array.from(new Set(hashtags.map(tag => tag.substring(1).normalize('NFC'))));
 }
 
 // Extract first image from content with resolved path
@@ -167,7 +180,8 @@ function extractExcerpt(content: string): string {
       const cleaned = trimmed
         .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
         .replace(/[*_`]/g, '')
-        .trim();
+        .trim()
+        .normalize('NFC');
       if (cleaned && !cleaned.startsWith('#')) {
         return cleaned.length > 200 ? cleaned.substring(0, 200) + '...' : cleaned;
       }
@@ -177,12 +191,12 @@ function extractExcerpt(content: string): string {
 }
 
 // Get all markdown files recursively
-function getMarkdownFiles(dir: string, baseDir: string = dir): string[] {
+function getMarkdownFiles(dir: string, baseDir: string = dir): { filePath: string; mtime: Date }[] {
   if (!fs.existsSync(dir)) {
     return [];
   }
 
-  const files: string[] = [];
+  const files: { filePath: string; mtime: Date }[] = [];
   const entries = fs.readdirSync(dir, { withFileTypes: true });
 
   for (const entry of entries) {
@@ -190,11 +204,22 @@ function getMarkdownFiles(dir: string, baseDir: string = dir): string[] {
     if (entry.isDirectory()) {
       files.push(...getMarkdownFiles(fullPath, baseDir));
     } else if (entry.name.endsWith('.md')) {
-      files.push(fullPath);
+      const stats = fs.statSync(fullPath);
+      files.push({ filePath: fullPath, mtime: stats.mtime });
     }
   }
 
   return files;
+}
+
+// Normalize path to NFC (for Korean characters on macOS)
+function normalizeSlug(filePath: string, baseDir: string): string {
+  const relativePath = path.relative(baseDir, filePath);
+  return relativePath
+    .split(path.sep)
+    .map(p => p.normalize('NFC'))
+    .join('/')
+    .replace(/\.md$/, '');
 }
 
 // Prepare statements
@@ -246,6 +271,18 @@ function processFiles() {
   const files = getMarkdownFiles(MD_DIR);
   console.log(`Found ${files.length} markdown files`);
 
+  // Group by normalized slug, keep newest by mtime
+  const filesBySlug = new Map<string, { filePath: string; mtime: Date }>();
+  for (const { filePath, mtime } of files) {
+    const slug = normalizeSlug(filePath, MD_DIR);
+    const existing = filesBySlug.get(slug);
+    if (!existing || mtime > existing.mtime) {
+      filesBySlug.set(slug, { filePath, mtime });
+    }
+  }
+
+  console.log(`After deduplication: ${filesBySlug.size} unique posts`);
+
   const postsForFeed: Array<{
     slug: string;
     title: string;
@@ -253,11 +290,8 @@ function processFiles() {
     created_at: string;
   }> = [];
 
-  for (const filePath of files) {
-    const relativePath = path.relative(MD_DIR, filePath);
-    const slug = relativePath.replace(/\.md$/, '').replace(/\\/g, '/');
-
-    const content = fs.readFileSync(filePath, 'utf-8');
+  for (const [slug, { filePath }] of filesBySlug) {
+    const content = fs.readFileSync(filePath, 'utf-8').normalize('NFC');
     const stats = fs.statSync(filePath);
 
     const title = extractTitle(content, path.basename(filePath));
