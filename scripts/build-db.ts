@@ -43,7 +43,7 @@ function copyDirRecursive(src: string, dest: string) {
     }
   }
 
-  for (const [normalizedName, { entry, srcPath }] of normalizedEntries) {
+  normalizedEntries.forEach(({ entry, srcPath }, normalizedName) => {
     const destPath = path.join(dest, normalizedName);
 
     if (entry.isDirectory()) {
@@ -51,7 +51,7 @@ function copyDirRecursive(src: string, dest: string) {
     } else {
       fs.copyFileSync(srcPath, destPath);
     }
-  }
+  });
 }
 
 // Delete existing database
@@ -290,7 +290,7 @@ function processFiles() {
     created_at: string;
   }> = [];
 
-  for (const [slug, { filePath }] of filesBySlug) {
+  Array.from(filesBySlug.entries()).forEach(([slug, { filePath }]) => {
     const content = fs.readFileSync(filePath, 'utf-8').normalize('NFC');
     const stats = fs.statSync(filePath);
 
@@ -336,7 +336,7 @@ function processFiles() {
     } catch (error) {
       console.error(`Error processing ${filePath}:`, error);
     }
-  }
+  });
 
   // Generate feed.xml
   generateFeedXml(postsForFeed);
