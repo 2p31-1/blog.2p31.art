@@ -338,7 +338,7 @@ function processFiles() {
     slug: string;
     title: string;
     excerpt: string;
-    created_at: string | null;
+    created_at: string;
   }> = [];
 
   const missingDates: string[] = [];
