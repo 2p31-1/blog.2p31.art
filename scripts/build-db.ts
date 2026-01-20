@@ -241,21 +241,37 @@ const insertPostHashtag = db.prepare(`
 `);
 
 // Load config for feed.xml generation
-const configPath = path.join(process.cwd(), '.env.local');
-const envPath = fs.existsSync(configPath) ? configPath : path.join(process.cwd(), '.env');
-let blogName = '개발 블로그';
-let blogDescription = '개인 개발 블로그';
-let siteUrl = 'https://example.com';
+// Priority: process.env (Vercel) > .env.local > .env > defaults
+let blogName = process.env.NEXT_PUBLIC_BLOG_NAME || '';
+let blogDescription = process.env.NEXT_PUBLIC_BLOG_DESCRIPTION || '';
+let siteUrl = process.env.NEXT_PUBLIC_SITE_URL || '';
 
-if (fs.existsSync(envPath)) {
-  const envContent = fs.readFileSync(envPath, 'utf-8');
-  const nameMatch = envContent.match(/NEXT_PUBLIC_BLOG_NAME=(.+)/);
-  const descMatch = envContent.match(/NEXT_PUBLIC_BLOG_DESCRIPTION=(.+)/);
-  const urlMatch = envContent.match(/NEXT_PUBLIC_SITE_URL=(.+)/);
-  if (nameMatch) blogName = nameMatch[1].trim();
-  if (descMatch) blogDescription = descMatch[1].trim();
-  if (urlMatch) siteUrl = urlMatch[1].trim();
+// Fallback to .env files if env vars not set (local development)
+if (!blogName || !blogDescription || !siteUrl) {
+  const configPath = path.join(process.cwd(), '.env.local');
+  const envPath = fs.existsSync(configPath) ? configPath : path.join(process.cwd(), '.env');
+
+  if (fs.existsSync(envPath)) {
+    const envContent = fs.readFileSync(envPath, 'utf-8');
+    if (!blogName) {
+      const nameMatch = envContent.match(/NEXT_PUBLIC_BLOG_NAME=(.+)/);
+      if (nameMatch) blogName = nameMatch[1].trim();
+    }
+    if (!blogDescription) {
+      const descMatch = envContent.match(/NEXT_PUBLIC_BLOG_DESCRIPTION=(.+)/);
+      if (descMatch) blogDescription = descMatch[1].trim();
+    }
+    if (!siteUrl) {
+      const urlMatch = envContent.match(/NEXT_PUBLIC_SITE_URL=(.+)/);
+      if (urlMatch) siteUrl = urlMatch[1].trim();
+    }
+  }
 }
+
+// Final defaults
+blogName = blogName || '개발 블로그';
+blogDescription = blogDescription || '개인 개발 블로그';
+siteUrl = siteUrl || 'https://example.com';
 
 function escapeXml(text: string): string {
   return text
