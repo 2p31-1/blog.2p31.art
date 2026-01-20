@@ -6,6 +6,41 @@ const MD_DIR = path.join(process.cwd(), 'md');
 const DB_PATH = path.join(process.cwd(), 'data', 'blog.db');
 const PUBLIC_MD_DIR = path.join(process.cwd(), 'public', 'md');
 
+// Parse frontmatter dates from markdown content
+// Expected format:
+// ---
+// created: 2025-01-19
+// modified: 2025-01-20
+// ---
+function parseFrontmatterDates(content: string): { created: string | null; modified: string | null } {
+  const frontmatterMatch = content.match(/^---\r?\n([\s\S]*?)\r?\n---/);
+  if (!frontmatterMatch) {
+    return { created: null, modified: null };
+  }
+
+  const frontmatter = frontmatterMatch[1];
+  const createdMatch = frontmatter.match(/^created:\s*(.+)$/m);
+  const modifiedMatch = frontmatter.match(/^modified:\s*(.+)$/m);
+
+  const parseDate = (dateStr: string | undefined): string | null => {
+    if (!dateStr) return null;
+    const trimmed = dateStr.trim();
+    // Support formats: 2025-01-19, 2025-01-19 14:30, 2025-01-19T14:30:00
+    const date = new Date(trimmed);
+    return isNaN(date.getTime()) ? null : date.toISOString();
+  };
+
+  return {
+    created: parseDate(createdMatch?.[1]),
+    modified: parseDate(modifiedMatch?.[1]),
+  };
+}
+
+// Remove frontmatter from content for storage
+function removeFrontmatter(content: string): string {
+  return content.replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, '');
+}
+
 // Ensure data directory exists
 if (!fs.existsSync(path.dirname(DB_PATH))) {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
@@ -71,8 +106,8 @@ db.exec(`
     excerpt TEXT,
     thumbnail TEXT,
     category TEXT NOT NULL DEFAULT '',
-    created_at TEXT NOT NULL,
-    modified_at TEXT NOT NULL,
+    created_at TEXT,
+    modified_at TEXT,
     reading_time INTEGER NOT NULL
   );
 
@@ -303,12 +338,26 @@ function processFiles() {
     slug: string;
     title: string;
     excerpt: string;
-    created_at: string;
+    created_at: string | null;
   }> = [];
 
+  const missingDates: string[] = [];
+
   Array.from(filesBySlug.entries()).forEach(([slug, { filePath }]) => {
-    const content = fs.readFileSync(filePath, 'utf-8').normalize('NFC');
-    const stats = fs.statSync(filePath);
+    const rawContent = fs.readFileSync(filePath, 'utf-8').normalize('NFC');
+
+    // Parse frontmatter dates
+    const dates = parseFrontmatterDates(rawContent);
+    const createdAt = dates.created;
+    const modifiedAt = dates.modified || dates.created; // fallback to created if no modified
+
+    // Log warning for missing dates
+    if (!createdAt) {
+      missingDates.push(slug);
+    }
+
+    // Remove frontmatter from content for storage
+    const content = removeFrontmatter(rawContent);
 
     const title = extractTitle(content, path.basename(filePath));
     const excerpt = extractExcerpt(content);
@@ -316,10 +365,6 @@ function processFiles() {
     const category = extractCategory(slug);
     const hashtags = extractHashtags(content);
     const readingTime = calculateReadingTime(content);
-
-    // Use birthtime for created_at, mtime for modified_at
-    const createdAt = stats.birthtime.toISOString();
-    const modifiedAt = stats.mtime.toISOString();
 
     try {
       const result = insertPost.run({
@@ -345,14 +390,27 @@ function processFiles() {
         }
       }
 
-      // Add to feed list
-      postsForFeed.push({ slug, title, excerpt, created_at: createdAt });
+      // Add to feed list (only if has date)
+      if (createdAt) {
+        postsForFeed.push({ slug, title, excerpt, created_at: createdAt });
+      }
 
       console.log(`Processed: ${slug} (${category || 'root'}, ${hashtags.length} tags, ${readingTime}min)`);
     } catch (error) {
       console.error(`Error processing ${filePath}:`, error);
     }
   });
+
+  // Log files missing dates
+  if (missingDates.length > 0) {
+    console.log(`\n⚠️  Missing dates in ${missingDates.length} file(s):`);
+    missingDates.forEach(slug => console.log(`   - ${slug}`));
+    console.log(`\n   Add frontmatter at the top of each file:`);
+    console.log(`   ---`);
+    console.log(`   created: 2025-01-19`);
+    console.log(`   modified: 2025-01-20`);
+    console.log(`   ---`);
+  }
 
   // Generate feed.xml
   generateFeedXml(postsForFeed);
@@ -432,8 +490,8 @@ function generatePaginationData() {
     excerpt: string;
     thumbnail: string | null;
     category: string;
-    created_at: string;
-    modified_at: string;
+    created_at: string | null;
+    modified_at: string | null;
     reading_time: number;
     hashtags: string[];
   }) => ({
@@ -462,8 +520,8 @@ function generatePaginationData() {
       excerpt: string;
       thumbnail: string | null;
       category: string;
-      created_at: string;
-      modified_at: string;
+      created_at: string | null;
+      modified_at: string | null;
       reading_time: number;
     }>;
 
@@ -529,8 +587,8 @@ function generatePaginationData() {
         excerpt: string;
         thumbnail: string | null;
         category: string;
-        created_at: string;
-        modified_at: string;
+        created_at: string | null;
+        modified_at: string | null;
         reading_time: number;
       }>;
 
@@ -583,8 +641,8 @@ function generatePaginationData() {
         excerpt: string;
         thumbnail: string | null;
         category: string;
-        created_at: string;
-        modified_at: string;
+        created_at: string | null;
+        modified_at: string | null;
         reading_time: number;
       }>;
 
