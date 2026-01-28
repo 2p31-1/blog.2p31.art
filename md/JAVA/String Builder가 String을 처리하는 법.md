@@ -202,4 +202,8 @@ String으로 만들게 되는 경우 해당 사이즈만큼을 String이 갖는 
 ## `StringBuffer`와의 차이
 `StringBuffer`는 멀티스레드에서 안전하다는 점이 다르다.
 
+## 결론
+
+자주 수정되거나 `for`문에서 수정되는 문자열은 `StringBuilder`이나 `StringBuffer`를, 그렇지 않으면 `+`를 통해서 concatenate해줘도 빠르게 실행된다.
+
 #StringBuilder #String #Pool #JAVA
