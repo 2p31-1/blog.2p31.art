@@ -86,7 +86,11 @@ abstract sealed class AbstractStringBuilder implements Appendable, CharSequence
     public AbstractStringBuilder append(Object obj) {
         return append(String.valueOf(obj));
     }
+```
+<details>
+<summary>오버로딩 구현 전부 보기</summary>
 
+```java
     /**
      * Appends the specified string to this character sequence.
      * <p>
@@ -170,6 +174,11 @@ abstract sealed class AbstractStringBuilder implements Appendable, CharSequence
         return this.append(s, 0, s.length());
     }
 ```
+
+</details>
+
+
+
 문자열을 합치는 `append()`가 `byte[] value`의 크기를 확인하고, 작은 경우 크기를 조절해가면서 문자열을 저장한다. 즉, `StringBuilder`는 mutable한 `byte` Array를 가지고 크기를 바꿔가면서 들고 있다가, `toString`에서 String으로 반환하게 된다.
 ```java
     @Override

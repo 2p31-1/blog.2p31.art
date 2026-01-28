@@ -9,6 +9,7 @@ import rehypePrism from 'rehype-prism-plus';
 import { CodeCopyButton } from './CodeCopyButton';
 import { BlurImage } from './BlurImage';
 import { HeadingAnchorInteraction } from './HeadingAnchorInteraction';
+import { SpoilerInteraction } from './SpoilerInteraction';
 
 interface MarkdownRendererProps {
   content: string;
@@ -99,6 +100,7 @@ export function MarkdownRenderer({ content, slug }: MarkdownRendererProps) {
         {transformedContent}
       </ReactMarkdown>
       <HeadingAnchorInteraction />
+      <SpoilerInteraction />
     </Box>
   );
 }
