@@ -3,6 +3,8 @@ created: 2025-02-03
 modified: 2025-02-06
 ---
 
+# Grafana로 서버 관측성 향상하기
+
 월간 유저가 4천명 정도 되니, 서버 이곳저곳에 나뉘어있는 로그를 참고하기 힘들어졌다. nginx로그와 pm2로그, jenkins 빌드로그, node.js 로그가 서로 다른 곳에 발생하고 있는데, 실행 중 오류나 디버깅하고싶은 부분도 찾기가 어려운 문제들이 있었다. 따라서, Grafana를 서버 내에 구축하고, 로그를 모아 관측성을 향상하려고 한다.
 
 ## 용어
@@ -37,9 +39,7 @@ sudo apt-get install -y apt-transport-https wget gpg
 sudo mkdir -p /etc/apt/keyrings/
 wget -q -O - https://apt.grafana.com/gpg.key | gpg --dearmor | sudo tee /etc/apt/keyrings/grafana.gpg > /dev/null
 echo "deb [signed-by=/etc/apt/keyrings/grafana.gpg] https://apt.grafana.com stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
-# Updates the list of available packages
 sudo apt-get update
-# Installs the latest OSS release:
 sudo apt-get install grafana loki alloy -y
 ```
 
