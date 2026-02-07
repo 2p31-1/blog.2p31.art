@@ -105,21 +105,69 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
   // Remove first h1 title and hashtag lines from content for display
   const lines = post.content.split('\n');
   let firstH1Removed = false;
+  let inCodeBlock = false;
+  let codeBlockFence = '';
+
   const contentWithoutHashtags = lines
     .filter((line) => {
-      // Remove first # title if exists
-      if (!firstH1Removed && line.trim().match(/^#\s+.+$/)) {
+      const trimmedLine = line.trim();
+
+      // Track code block state
+      const fenceMatch = trimmedLine.match(/^(`{3,}|~{3,})/);
+      if (fenceMatch) {
+        if (!inCodeBlock) {
+          inCodeBlock = true;
+          codeBlockFence = fenceMatch[1][0];
+        } else if (fenceMatch[1][0] === codeBlockFence) {
+          inCodeBlock = false;
+          codeBlockFence = '';
+        }
+        return true; // Keep fence lines
+      }
+
+      // Don't process lines inside code blocks
+      if (inCodeBlock) {
+        return true;
+      }
+
+      // Remove first # title if exists (only outside code blocks)
+      if (!firstH1Removed && trimmedLine.match(/^#\s+.+$/)) {
         firstH1Removed = true;
         return false;
       }
+
       // Remove hashtag-only lines
-      return !line.trim().match(/^#\S+(\s+#\S+)*$/);
+      return !trimmedLine.match(/^#\S+(\s+#\S+)*$/);
     })
     .join('\n');
 
-  // 첫 heading 위치 찾기
+  // 첫 heading 위치 찾기 (코드 블록 외부에서만)
   const contentLines = contentWithoutHashtags.split('\n');
-  const firstHeadingIndex = contentLines.findIndex((line) => /^#{1,6}\s+.+$/.test(line.trim()));
+  inCodeBlock = false;
+  codeBlockFence = '';
+  const firstHeadingIndex = contentLines.findIndex((line) => {
+    const trimmedLine = line.trim();
+
+    // Track code block state
+    const fenceMatch = trimmedLine.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      if (!inCodeBlock) {
+        inCodeBlock = true;
+        codeBlockFence = fenceMatch[1][0];
+      } else if (fenceMatch[1][0] === codeBlockFence) {
+        inCodeBlock = false;
+        codeBlockFence = '';
+      }
+      return false;
+    }
+
+    // Only match headings outside code blocks
+    if (inCodeBlock) {
+      return false;
+    }
+
+    return /^#{1,6}\s+.+$/.test(trimmedLine);
+  });
 
   // 첫 heading 기준으로 콘텐츠 분리
   const beforeHeading = firstHeadingIndex > 0 ? contentLines.slice(0, firstHeadingIndex).join('\n') : '';

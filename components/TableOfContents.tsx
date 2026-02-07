@@ -14,19 +14,75 @@ interface TableOfContentsProps {
 }
 
 function extractHeadings(content: string): TocItem[] {
-  const headingRegex = /^(#{1,6})\s+(.+)$/gm;
   const headings: TocItem[] = [];
-  let match;
+  const lines = content.split('\n');
 
-  while ((match = headingRegex.exec(content)) !== null) {
-    const level = match[1].length;
-    const text = match[2].trim();
-    // ID 생성 로직 (react-markdown-preview와 동일하게)
-    const id = text
-      .toLowerCase()
-      .replace(/[^\w\s\uAC00-\uD7AF-]/g, '')
-      .replace(/\s+/g, '-');
-    headings.push({ id, text, level });
+  let inCodeBlock = false;
+  let codeBlockFence = '';
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmedLine = line.trim();
+
+    // Check for code block fences (``` or ~~~)
+    const fenceMatch = trimmedLine.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      if (!inCodeBlock) {
+        // Starting a code block
+        inCodeBlock = true;
+        codeBlockFence = fenceMatch[1][0]; // ` or ~
+      } else if (fenceMatch[1][0] === codeBlockFence) {
+        // Ending a code block (must match the opening fence type)
+        inCodeBlock = false;
+        codeBlockFence = '';
+      }
+      continue;
+    }
+
+    // Skip lines inside code blocks
+    if (inCodeBlock) {
+      continue;
+    }
+
+    // Check for HTML comments (skip entire comment blocks)
+    if (trimmedLine.includes('<!--')) {
+      // Simple check - skip lines with HTML comments
+      // A more robust implementation would track multi-line comments
+      continue;
+    }
+
+    // Match headings (must be at start of line, not in inline code)
+    const headingMatch = line.match(/^(#{1,6})\s+(.+)$/);
+    if (headingMatch) {
+      const level = headingMatch[1].length;
+      let text = headingMatch[2].trim();
+
+      // Remove inline code, links, and other markdown formatting from heading text
+      // Remove inline code first
+      text = text.replace(/`[^`]+`/g, '');
+      // Remove links but keep the text
+      text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+      // Remove emphasis markers
+      text = text.replace(/(\*\*|__)(.*?)\1/g, '$2');
+      text = text.replace(/(\*|_)(.*?)\1/g, '$2');
+      // Remove HTML tags
+      text = text.replace(/<[^>]+>/g, '');
+      // Final trim
+      text = text.trim();
+
+      // Skip if heading is empty after cleanup
+      if (!text) {
+        continue;
+      }
+
+      // ID 생성 로직 (react-markdown-preview와 동일하게)
+      const id = text
+        .toLowerCase()
+        .replace(/[^\w\s\uAC00-\uD7AF-]/g, '')
+        .replace(/\s+/g, '-');
+
+      headings.push({ id, text, level });
+    }
   }
 
   return headings;

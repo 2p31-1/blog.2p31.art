@@ -156,18 +156,96 @@ function calculateReadingTime(content: string): number {
 
 // Extract title from content (first # heading or filename)
 function extractTitle(content: string, filename: string): string {
-  const match = content.match(/^#\s+(.+)$/m);
-  if (match) {
-    return match[1].trim().normalize('NFC');
+  const lines = content.split('\n');
+  let inCodeBlock = false;
+  let codeBlockFence = '';
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    // Check for code block fences (``` or ~~~)
+    const fenceMatch = trimmedLine.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      if (!inCodeBlock) {
+        inCodeBlock = true;
+        codeBlockFence = fenceMatch[1][0];
+      } else if (fenceMatch[1][0] === codeBlockFence) {
+        inCodeBlock = false;
+        codeBlockFence = '';
+      }
+      continue;
+    }
+
+    // Skip lines inside code blocks
+    if (inCodeBlock) {
+      continue;
+    }
+
+    // Skip HTML comments
+    if (trimmedLine.includes('<!--')) {
+      continue;
+    }
+
+    // Match first # heading (h1 only)
+    const headingMatch = line.match(/^#\s+(.+)$/);
+    if (headingMatch) {
+      let text = headingMatch[1].trim();
+
+      // Remove markdown formatting from title
+      text = text.replace(/`[^`]+`/g, '');
+      text = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
+      text = text.replace(/(\*\*|__)(.*?)\1/g, '$2');
+      text = text.replace(/(\*|_)(.*?)\1/g, '$2');
+      text = text.replace(/<[^>]+>/g, '');
+      text = text.trim();
+
+      if (text) {
+        return text.normalize('NFC');
+      }
+    }
   }
+
   return filename.replace(/\.md$/, '').normalize('NFC');
 }
 
 // Extract hashtags from content (at the end of file)
 function extractHashtags(content: string): string[] {
   const lines = content.trim().split('\n');
-  const lastLines = lines.slice(-5).join('\n'); // Check last 5 lines
-  const hashtags = lastLines.match(/#([가-힣a-zA-Z0-9_]+)/g) || [];
+  const hashtags: string[] = [];
+
+  // Check last 5 lines, but skip code blocks
+  let inCodeBlock = false;
+  let codeBlockFence = '';
+  const lastLines = lines.slice(-5);
+
+  for (const line of lastLines) {
+    const trimmedLine = line.trim();
+
+    // Track code block state
+    const fenceMatch = trimmedLine.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      if (!inCodeBlock) {
+        inCodeBlock = true;
+        codeBlockFence = fenceMatch[1][0];
+      } else if (fenceMatch[1][0] === codeBlockFence) {
+        inCodeBlock = false;
+        codeBlockFence = '';
+      }
+      continue;
+    }
+
+    // Skip lines inside code blocks
+    if (inCodeBlock) {
+      continue;
+    }
+
+    // Extract hashtags from this line (outside code blocks and inline code)
+    // Remove inline code first to avoid matching # inside backticks
+    const lineWithoutInlineCode = trimmedLine.replace(/`[^`]+`/g, '');
+    const lineHashtags = lineWithoutInlineCode.match(/#([가-힣a-zA-Z0-9_]+)/g) || [];
+    hashtags.push(...lineHashtags);
+  }
+
   return Array.from(new Set(hashtags.map(tag => tag.substring(1).normalize('NFC'))));
 }
 
@@ -202,21 +280,55 @@ function extractCategory(slug: string): string {
 function extractExcerpt(content: string): string {
   const lines = content.split('\n');
   let foundTitle = false;
+  let inCodeBlock = false;
+  let codeBlockFence = '';
 
   for (const line of lines) {
     const trimmed = line.trim();
-    if (!trimmed) continue;
-    if (trimmed.startsWith('#')) {
+
+    // Check for code block fences
+    const fenceMatch = trimmed.match(/^(`{3,}|~{3,})/);
+    if (fenceMatch) {
+      if (!inCodeBlock) {
+        inCodeBlock = true;
+        codeBlockFence = fenceMatch[1][0];
+      } else if (fenceMatch[1][0] === codeBlockFence) {
+        inCodeBlock = false;
+        codeBlockFence = '';
+      }
+      continue;
+    }
+
+    // Skip lines inside code blocks
+    if (inCodeBlock) {
+      continue;
+    }
+
+    // Skip empty lines and HTML comments
+    if (!trimmed || trimmed.includes('<!--')) {
+      continue;
+    }
+
+    // Check if this is a heading line
+    if (trimmed.match(/^#{1,6}\s+/)) {
       foundTitle = true;
       continue;
     }
+
+    // Look for first non-heading content
     if (foundTitle || !content.includes('# ')) {
       // Remove markdown formatting
-      const cleaned = trimmed
-        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
-        .replace(/[*_`]/g, '')
+      let cleaned = trimmed
+        .replace(/`[^`]+`/g, '') // inline code
+        .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // links
+        .replace(/!\[[^\]]*\]\([^)]+\)/g, '') // images
+        .replace(/(\*\*|__)(.*?)\1/g, '$2') // bold
+        .replace(/(\*|_)(.*?)\1/g, '$2') // italic
+        .replace(/<[^>]+>/g, '') // HTML tags
+        .replace(/[*_`]/g, '') // remaining markers
         .trim()
         .normalize('NFC');
+
       if (cleaned && !cleaned.startsWith('#')) {
         return cleaned.length > 200 ? cleaned.substring(0, 200) + '...' : cleaned;
       }
